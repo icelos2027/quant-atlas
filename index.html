@@ -1535,11 +1535,11 @@ W.obi = el => {
   const v = { qb: 40, qa: 15 };
   const defs = [['qb', '买一挂单量（手）', 1, 80, 1], ['qa', '卖一挂单量（手）', 1, 80, 1]];
   el.innerHTML = `${ctl(el, defs, v)}<div class="grid2"><div class="cv"></div><div class="cv2"></div></div><p class="msg"></p>
-    <p class="note">左图：买单向左、卖单向右，中间两条线之间的空白代表买一价 4000 到卖一价 4001 这一跳。右图的点为模拟的分箱统计，曲线为拟合的 S 形。</p>`;
+    <p class="note">盘口图：买单向左、卖单向右，中间的空白代表买一价 4000 到卖一价 4001 这一跳，微观价格按比例画在这段空白里。曲线图：点为模拟的分箱统计，曲线为拟合的 S 形。</p>`;
   const r = rngOf(53), dotsS = Array.from({ length: 10 }, (_, k) => { const I = (k + 0.5) / 10; return [I, 1 / (1 + Math.exp(-5.5 * (I - 0.5))) + (r() - 0.5) * 0.06]; });
   function upd() {
     const bids = [v.qb, 35, 50, 42, 60], asks = [v.qa, 30, 45, 55, 48], I = v.qb / (v.qb + v.qa), micro = 4001 * I + 4000 * (1 - I);
-    const Wd = 400, rh = 22, gap = 44, cxm = Wd / 2, half = 150, sc = half / 80, top = 6;
+    const Wd = 400, rh = 22, gap = 72, cxm = Wd / 2, half = 150, sc = half / 80, top = 6;
     let s = ''; const yA = k => top + (4 - k) * rh, gTop = top + 5 * rh, gBot = gTop + gap, yB = k => gBot + k * rh;
     asks.forEach((q, k) => { const y = yA(k); s += `<rect x="${cxm + 28}" y="${y + 3}" width="${(q * sc * 0.75).toFixed(1)}" height="${rh - 6}" style="fill:var(--other)"/><text x="${cxm}" y="${y + rh / 2 + 4}" text-anchor="middle" class="num">${4001 + k}</text><text x="${(cxm + 34 + q * sc * 0.75).toFixed(1)}" y="${y + rh / 2 + 4}" class="num">${q}</text>`; });
     bids.forEach((q, k) => { const y = yB(k); s += `<rect x="${(cxm - 28 - q * sc * 0.75).toFixed(1)}" y="${y + 3}" width="${(q * sc * 0.75).toFixed(1)}" height="${rh - 6}" style="fill:var(--accent)"/><text x="${cxm}" y="${y + rh / 2 + 4}" text-anchor="middle" class="num">${4000 - k}</text><text x="${(cxm - 34 - q * sc * 0.75).toFixed(1)}" y="${y + rh / 2 + 4}" text-anchor="end" class="num">${q}</text>`; });
@@ -1550,7 +1550,7 @@ W.obi = el => {
     const pu = 1 / (1 + Math.exp(-5.5 * (I - 0.5)));
     el.querySelector('.cv2').innerHTML = xy({ w: 400, h: 300, aria: '不平衡度与下一次向上的概率', xlo: 0, xhi: 1, ylo: 0, yhi: 1, xlab: '不平衡度 I = 买一 ÷（买一 + 卖一）', ylab: '下一次变动向上的概率', pts: dotsS, pc: 'muted', hl: [{ v: 0.5, dash: 1 }],
       curves: [{ pts: Array.from({ length: 51 }, (_, k) => [k / 50, 1 / (1 + Math.exp(-5.5 * (k / 50 - 0.5)))]), c: 'accent', w: 2.2 }], vl: [{ v: I, c: 'accent-strong', dash: 1 }], marks: [{ x: I, y: pu, label: fmt(pu, 2), a: I > 0.7 ? 'end' : 'start' }] });
-    el.querySelector('.msg').textContent = `不平衡度 ${I.toFixed(2)}，微观价格 ${micro.toFixed(2)}，比中间价${micro > 4000.5 ? '高' : micro < 4000.5 ? '低' : '持平'} ${Math.abs(micro - 4000.5).toFixed(2)} 跳。按右图曲线，下一次变动向上的概率约 ${fmt(pu, 2)}。吃单买入要付出半个价差（0.5 跳）加手续费，只有预期移动超过这个成本时才值得行动。`;
+    el.querySelector('.msg').textContent = `不平衡度 ${I.toFixed(2)}，微观价格 ${micro.toFixed(2)}，比中间价${micro > 4000.5 ? '高' : micro < 4000.5 ? '低' : '持平'} ${Math.abs(micro - 4000.5).toFixed(2)} 跳。按曲线图，下一次变动向上的概率约 ${fmt(pu, 2)}。吃单买入要付出半个价差（0.5 跳）加手续费，只有预期移动超过这个成本时才值得行动。`;
   }
   bindCtl(el, defs, v, upd);
   upd();
