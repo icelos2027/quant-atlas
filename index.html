@@ -1621,7 +1621,7 @@ W.cascade = el => {
     const ss = Array.from({ length: 41 }, (_, i) => i * 0.25);
     el.querySelector('.cv2').innerHTML = xy({ w: 400, h: 280, aria: '初始下跌与最终下跌', xlo: 0, xhi: 10, ylo: 0, yhi: Math.max(12, ...ss.map(x => solve(x / 100) * 100)) * 1.05, xlab: '初始下跌（%）', ylab: '最终下跌（%）',
       curves: [{ pts: [[0, 0], [10, 10]], c: 'muted', dash: 1, w: 1.2, label: '没有放大', lc: 'muted', lp: [10, 10, 'end'] }, { pts: ss.map(x => [x, solve(x / 100) * 100]), c: 'accent', w: 2.4 }], marks: [{ x: v.shock, y: D * 100, label: `${fmt(D * 100, 1)}%`, a: v.shock > 6 ? 'end' : 'start' }] });
-    el.querySelector('.msg').textContent = `初始下跌 ${v.shock.toFixed(1)}%，触发连锁后最终下跌 ${fmt(D * 100, 1)}%，放大 ${fmt(D / s, 1)} 倍，${fmt(Fr(D) * 100)}% 的多头仓位被强平。右图的曲线在某个初始下跌附近突然变陡：在这一点之前，强平只碰到沙堆边缘；越过这一点，强平推动的下跌又碰到更密的仓位，连锁自己维持下去。平均杠杆越高，这个陡峭点越靠近零。`;
+    el.querySelector('.msg').textContent = `初始下跌 ${v.shock.toFixed(1)}%，触发连锁后最终下跌 ${fmt(D * 100, 1)}%，放大 ${fmt(D / s, 1)} 倍，${fmt(Fr(D) * 100)}% 的多头仓位被强平。“初始下跌与最终下跌”这张图的曲线在某个初始下跌附近突然变陡：在这一点之前，强平只碰到沙堆边缘；越过这一点，强平推动的下跌又碰到更密的仓位，连锁自己维持下去。平均杠杆越高，这个陡峭点越靠近零。`;
   }
   bindCtl(el, defs, v, upd);
   upd();
