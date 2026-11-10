@@ -1,0 +1,1783 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>量化策略图鉴</title>
+<meta name="description" content="20 类常见量化策略：形状与物理对应、交易周期、秒级视角与统计检验">
+<meta name="theme-color" content="#f2ede5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1e1b17" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="策略图鉴">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="fonts/lxgwwenkaigbscreen/result.min.css">
+<link rel="stylesheet" href="fonts/lxgwwenkaimonogbscreen/result.min.css">
+<style>
+/* 布局：左侧固定索引（按策略类别分组）＋ 右侧一次只看一个策略；窄屏时索引变成顶部下拉。
+   配色沿用「慢慢联系」：燕麦（默认）/ 暮紫，各有浅深两套；不用纯白纯黑，无动画，实线边框。 */
+:root {
+  --bg: #f2ede5;
+  --surface: #faf7f2;
+  --surface-2: #ece5da;
+  --text: #3a332b;
+  --muted: #675e52;
+  --border: #e0d6c7;
+  --accent: #7e6447;
+  --accent-text: #faf7f2;
+  --accent-soft: #ebe1d3;
+  --accent-strong: #5e4a34;
+  --other: #5f7a94;          /* 第二色：卖方 / 对比序列（灰蓝） */
+  --other-soft: #e2e6e9;
+  --warn: #9a7a35;
+  --illo-ink: #8c7b66;
+  --illo-fill: #e8dcc9;
+  --font-body: 'LXGW WenKai GB Screen', 'LXGW WenKai Screen', 'LXGW WenKai', 'LXGW WenKai TC', 'Kaiti SC', 'STKaiti', -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif;
+  --font-data: 'LXGW WenKai Mono GB Screen', 'LXGW WenKai Mono TC', 'LXGW WenKai Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --fs-s: 0.8125rem;
+  --fs-m: 0.9375rem;
+  --fs-b: 1rem;
+  --fs-l: 1.1875rem;
+  --fs-xl: 1.5rem;
+  --fs-xxl: 1.875rem;
+  --r: 8px;
+  color-scheme: light;
+}
+:root[data-palette="dusk"] {
+  --bg: #eeecf1; --surface: #f8f7fa; --surface-2: #e6e3ec; --text: #322f3a; --muted: #625e75;
+  --border: #dcd8e3; --accent: #645e80; --accent-text: #f8f7fa; --accent-soft: #e3e0ec; --accent-strong: #4a4563;
+  --other: #5c7f8f; --other-soft: #e0e7ea; --warn: #8f7738; --illo-ink: #7d7896; --illo-fill: #dfdbea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1e1b17; --surface: #27231e; --surface-2: #312c26; --text: #ded6ca; --muted: #b3a898;
+    --border: #3d372f; --accent: #a99174; --accent-text: #1f1913; --accent-soft: #3a3128; --accent-strong: #e3cfb2;
+    --other: #8fa7bd; --other-soft: #2c333a; --warn: #c4a765; --illo-ink: #a8977f; --illo-fill: #3a3128;
+    color-scheme: dark;
+  }
+  :root:not([data-theme="light"])[data-palette="dusk"] {
+    --bg: #1b1a20; --surface: #24232b; --surface-2: #2e2c36; --text: #dad7e1; --muted: #ada8bc;
+    --border: #3a3845; --accent: #9890b8; --accent-text: #1c1a24; --accent-soft: #34314a; --accent-strong: #d3cdea;
+    --other: #8fb0bd; --other-soft: #2a3238; --warn: #c2a768; --illo-ink: #8f89aa; --illo-fill: #34314a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1e1b17; --surface: #27231e; --surface-2: #312c26; --text: #ded6ca; --muted: #b3a898;
+  --border: #3d372f; --accent: #a99174; --accent-text: #1f1913; --accent-soft: #3a3128; --accent-strong: #e3cfb2;
+  --other: #8fa7bd; --other-soft: #2c333a; --warn: #c4a765; --illo-ink: #a8977f; --illo-fill: #3a3128;
+  color-scheme: dark;
+}
+:root[data-theme="dark"][data-palette="dusk"] {
+  --bg: #1b1a20; --surface: #24232b; --surface-2: #2e2c36; --text: #dad7e1; --muted: #ada8bc;
+  --border: #3a3845; --accent: #9890b8; --accent-text: #1c1a24; --accent-soft: #34314a; --accent-strong: #d3cdea;
+  --other: #8fb0bd; --other-soft: #2a3238; --warn: #c2a768; --illo-ink: #8f89aa; --illo-fill: #34314a;
+}
+:root[data-font="large"] { font-size: 18.5px; }
+
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); -webkit-text-size-adjust: 100%; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+*, *::before, *::after { box-sizing: border-box; animation: none !important; scroll-behavior: auto !important; }
+body {
+  margin: 0; -webkit-tap-highlight-color: transparent; background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: var(--fs-b); line-height: 1.7; letter-spacing: 0.01em;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+a { color: var(--accent-strong); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--other); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.35; margin: 0; font-weight: 700; }
+p { margin: 0; }
+.num, .mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.shell { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; max-width: 1180px; margin: 0 auto; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-block: 18px 16px; border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand a { color: var(--text); text-decoration: none; font-size: var(--fs-l); font-weight: 700; }
+.brand .sub { color: var(--muted); font-size: var(--fs-s); }
+.prefs { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; font-size: var(--fs-s); color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.seg button { font: inherit; font-size: var(--fs-s); color: var(--text); background: transparent; border: 0; padding: 4px 12px; min-height: 30px; cursor: pointer; }
+@media (pointer: coarse) { .seg button { min-height: 36px; padding: 4px 14px; } .btn { min-height: 40px; } }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+.pref { display: flex; align-items: center; gap: 8px; }
+
+.layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 40px; padding-top: 24px; }
+.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; max-height: calc(100vh - 32px); overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding-right: 4px; }
+.index h3 { font-size: var(--fs-s); color: var(--muted); font-weight: 400; letter-spacing: 0.08em; margin-bottom: 4px; }
+.index ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.index a { display: block; padding: 3px 10px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: var(--fs-m); }
+.index a:hover { background: var(--surface-2); }
+.index a[aria-current="page"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
+.picker { display: none; }
+
+main { min-width: 0; max-width: 820px; display: flex; flex-direction: column; gap: 20px; }
+#content { display: flex; flex-direction: column; gap: 36px; min-width: 0; }
+.crumb { font-size: var(--fs-s); color: var(--muted); }
+.head { display: flex; flex-direction: column; gap: 10px; }
+.head h1 { font-size: var(--fs-xxl); }
+.head .en { font-family: var(--font-data); color: var(--muted); font-size: var(--fs-s); letter-spacing: 0.04em; }
+.lead { font-size: var(--fs-l); line-height: 1.65; max-width: 38em; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: var(--fs-s); border: 1px solid var(--border); background: var(--surface); border-radius: 6px; padding: 1px 10px; color: var(--muted); }
+.chip b { color: var(--text); font-weight: 400; }
+
+section { display: flex; flex-direction: column; gap: 14px; }
+section > h2 { font-size: var(--fs-l); display: flex; align-items: baseline; gap: 10px; }
+section > h2 .tag { font-size: var(--fs-s); font-weight: 400; color: var(--muted); }
+.prose { display: flex; flex-direction: column; gap: 12px; max-width: 40em; }
+.note { font-size: var(--fs-s); color: var(--muted); max-width: 46em; }
+
+.diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
+.diagram svg { display: block; }
+.lane text { font-family: var(--font-body); font-size: 13px; fill: var(--text); }
+.lane .halo { paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
+.lane .ln-h { fill: var(--surface-2); stroke: var(--border); }
+.lane .ln-l { stroke: var(--border); stroke-width: 1.5; }
+.lane .ln-row { stroke: var(--surface-2); stroke-width: 1; }
+.lane .ln-a { stroke: var(--accent); stroke-width: 1.6; fill: none; }
+.lane .ah { fill: var(--accent); }
+.lane .ln-s { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.4; }
+.lane .ln-nc { fill: var(--bg); stroke: var(--border); }
+.lane .ln-n { font-family: var(--font-data); font-size: 11px; fill: var(--muted); }
+ol.steps { margin: 0; padding-left: 1.6em; display: flex; flex-direction: column; gap: 4px; max-width: 44em; font-size: var(--fs-m); }
+ol.steps li::marker { font-family: var(--font-data); color: var(--muted); }
+ol.steps .sn { color: var(--muted); }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.panel .status { font-size: var(--fs-s); color: var(--muted); }
+.btn { font: inherit; font-size: var(--fs-m); padding: 5px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text); cursor: pointer; }
+.btn.quiet { background: transparent; color: var(--accent-strong); border-color: var(--border); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.msg { background: var(--surface-2); border-radius: 6px; padding: 10px 12px; font-size: var(--fs-m); min-height: 4.6em; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--fs-s); }
+th, td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 400; white-space: nowrap; }
+td.r, th.r { text-align: right; }
+td.num, td.r { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+tr.hl td { background: var(--accent-soft); }
+tr.dim td { color: var(--muted); }
+.buy { color: var(--accent-strong); }
+.sell { color: var(--other); }
+.okv { color: var(--accent-strong); }
+.warnv { color: var(--warn); }
+.cell-bar { display: flex; align-items: center; gap: 8px; }
+.cell-bar span.b { display: inline-block; height: 8px; background: var(--accent); border-radius: 2px; }
+.ord { display: inline-block; font-family: var(--font-data); font-size: 12px; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin: 1px 2px; background: var(--bg); white-space: nowrap; }
+.qlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s); }
+.qlist li { display: flex; gap: 10px; }
+.qlist .st { width: 4.5em; flex: none; color: var(--muted); }
+.qlist li.cur { color: var(--accent-strong); }
+.qlist li.cur .st { color: var(--accent-strong); }
+.ctrl { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) 4.5em; align-items: center; gap: 4px 10px; font-size: var(--fs-s); }
+.ctrl input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ctrl output { font-family: var(--font-data); text-align: right; }
+input[type="number"] { font: inherit; font-family: var(--font-data); width: 7em; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.formula { font-family: var(--font-data); font-size: var(--fs-s); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; line-height: 1.8; overflow-x: auto; white-space: nowrap; }
+svg.chart { width: 100%; height: auto; display: block; }
+svg.chart text { font-family: var(--font-body); font-size: 12px; fill: var(--muted); }
+svg.chart .t-strong { fill: var(--text); }
+svg.chart .grid { stroke: var(--surface-2); stroke-width: 1; }
+svg.chart .axis { stroke: var(--border); stroke-width: 1; }
+.ems { font-family: var(--font-data); font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.ems .row { display: grid; grid-template-columns: repeat(7, minmax(max-content, 1fr)); gap: 0 14px; padding: 6px 10px; overflow-x: auto; }
+.ems .row.h { background: var(--surface-2); color: var(--muted); }
+.prog { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.prog span { display: block; height: 100%; background: var(--accent); }
+
+dl.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; }
+dl.two > div { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+dl.two dt { font-size: var(--fs-s); color: var(--muted); }
+dl.two dd { margin: 0; font-size: var(--fs-m); }
+ul.rules { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; max-width: 44em; font-size: var(--fs-m); }
+ul.rules .d { font-family: var(--font-data); font-size: var(--fs-s); color: var(--muted); margin-right: 6px; }
+dl.terms { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 10px 24px; margin: 0; }
+dl.terms div { border-top: 1px solid var(--border); padding-top: 6px; }
+dl.terms dt { font-weight: 700; font-size: var(--fs-m); }
+dl.terms dd { margin: 0; font-size: var(--fs-s); color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+.links a { font-size: var(--fs-m); border: 1px solid var(--border); background: var(--surface); padding: 2px 12px; border-radius: 6px; text-decoration: none; }
+.links a:hover { background: var(--surface-2); }
+.src { font-size: var(--fs-s); color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.pager { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; font-size: var(--fs-m); }
+.pager a { text-decoration: none; }
+
+/* 量化策略图鉴的补充样式 */
+.ctrl { grid-template-columns: minmax(8em, 12em) minmax(0, 1fr) 4.5em; }
+.ctrl input:disabled { opacity: 0.4; }
+.panel .bar .pref { font-size: var(--fs-s); color: var(--muted); }
+h3.sub { font-size: var(--fs-m); margin-top: 6px; }
+.shape { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px; max-width: 42em; }
+.formula { white-space: normal; }
+section > h2 .tag { font-weight: 400; }
+.refs { font-size: var(--fs-s); color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.refs span:first-child { color: var(--text); }
+svg.chart .halo { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+
+/* 总览 */
+.smap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg); }
+.smap svg { display: block; }
+.smap text { font-family: var(--font-body); font-size: 13px; fill: var(--text); }
+.smap .band-l { font-size: 12px; fill: var(--muted); }
+.smap .t-strong { font-weight: 700; }
+.smap a:hover text, .smap a:focus-visible text { fill: var(--accent-strong); text-decoration: underline; }
+.groups { display: flex; flex-direction: column; gap: 22px; }
+.grp { display: flex; flex-direction: column; gap: 8px; }
+.grp h3 { font-size: var(--fs-m); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.grp h3 .tag { font-size: var(--fs-s); font-weight: 400; color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(14em, 1fr)); gap: 10px; }
+.card { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); text-decoration: none; }
+.card:hover { border-color: var(--accent); }
+.card small { font-size: 12.5px; color: var(--muted); }
+.axes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.axes > div { border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.axes h3 { font-size: var(--fs-m); }
+.axes p { font-size: var(--fs-s); color: var(--muted); }
+
+/* 认图 */
+.lineup { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.lineup button { font: inherit; font-size: 12.5px; display: flex; flex-direction: column; gap: 2px; align-items: stretch; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--muted); cursor: pointer; }
+.lineup button:disabled { cursor: default; }
+.lineup button.pick { border-color: var(--other); border-width: 2px; padding: 3px; }
+.lineup button.real { border-color: var(--accent); border-width: 2px; padding: 3px; background: var(--accent-soft); color: var(--accent-strong); }
+.lineup .cap { min-height: 1.5em; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 16px; }
+  .index { display: none; }
+  .picker { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s); color: var(--muted); }
+  .picker select { font: inherit; font-size: var(--fs-b); color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+}
+@media (max-width: 560px) {
+  .grid2, dl.two, .axes { grid-template-columns: minmax(0, 1fr); }
+  .head h1 { font-size: var(--fs-xl); }
+  .ctrl { grid-template-columns: minmax(6.5em, 8.5em) minmax(0, 1fr) 4em; }
+  .lineup { gap: 6px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header class="top">
+    <div class="brand"><a href="#overview">量化策略图鉴</a><span class="sub">20 类策略 · 交互图中的数据均为模拟</span></div>
+    <div class="prefs">
+      <div class="pref"><span id="lbl-pal">配色</span><div class="seg" role="group" aria-labelledby="lbl-pal"><button type="button" id="pal-oat" data-pal="oat">燕麦</button><button type="button" id="pal-dusk" data-pal="dusk">暮紫</button></div></div>
+      <div class="pref"><span id="lbl-theme">深浅</span><div class="seg" role="group" aria-labelledby="lbl-theme"><button type="button" id="theme-system" data-theme-pick="system">跟随系统</button><button type="button" id="theme-light" data-theme-pick="light">浅</button><button type="button" id="theme-dark" data-theme-pick="dark">深</button></div></div>
+      <div class="pref"><span id="lbl-font">字号</span><div class="seg" role="group" aria-labelledby="lbl-font"><button type="button" id="font-normal" data-font="normal">标准</button><button type="button" id="font-large" data-font="large">大</button></div></div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="index" id="index" aria-label="策略目录"></nav>
+    <main id="view">
+      <div class="picker"><label for="picker">选择策略</label><select id="picker"></select></div>
+      <div id="content"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+'use strict';
+const GROUPS = [
+  ['T', '趋势与动量', '价格朝一个方向持续，或强的继续强'],
+  ['R', '均值回归', '偏离之后被拉回'],
+  ['A', '套利与价差', '两个价格之间有成本或规则约束'],
+  ['M', '微观结构与高频', '盘口、订单流、延迟、被迫交易'],
+  ['V', '波动率', '交易波动的大小，而不是方向'],
+  ['S', '研究与执行', '每种策略都会用到的工具']
+];
+
+const E = [
+/* ---------- 趋势与动量 ---------- */
+{ id: 'tsmom', g: 'T', name: '时间序列动量（趋势跟踪）', short: '时间序列动量', en: 'Time-Series Momentum / Trend Following',
+  hold: '数周到数月', src: '行为偏差与风险溢价（学界有争议）', mk: '商品期货 · 股指 · 国债 · 汇率 · 加密',
+  phys: '惯性', pos: [6.2, 2, 0.75, 'l'],
+  one: '价格最近在涨就做多，在跌就做空，一直持有到反向信号出现。',
+  shape: '价格曲线像一段段台阶：大部分时间横向摆动，少数时段沿一个方向持续移动。策略的收益只来自持续移动的段落。对应的物理量是惯性：用过去一段时间的位移方向，预测下一段的方向。盈亏分布右偏，多数交易小亏，少数交易大赚。',
+  does: [
+    '信号：常见两种。均线法比较短期均线与长期均线；突破法看价格是否创出过去 N 日新高或新低（唐奇安通道，海龟交易法则用 20 日和 55 日）。也可以直接看过去 12 个月收益的正负，Moskowitz、Ooi、Pedersen（2012）在 58 个期货品种上检验了这种做法。',
+    '仓位：按波动率倒数分配，使每个品种贡献相近的风险。常用 ATR 或过去 20–60 日收益标准差，把整个组合的年化波动率控制在目标附近（例如 10%–15%）。',
+    '分散：同时交易几十个品种。单个品种出现大趋势的次数很少，品种多才有足够的趋势样本。CTA 基金的收益很大一部分来自品种间分散。',
+    '退出：反向信号出现时平仓或反手；突破法常配合 2 倍 ATR 的跟踪止损。'
+  ],
+  flow: { lanes: ['行情数据', '信号计算', '仓位与风控', '执行', '交易所'], steps: [
+    [0, 1, '收盘后读取当日结算价'],
+    [1, 1, '计算均线或通道', '快线上穿慢线，或收盘价高于过去 N 日最高价。'],
+    [1, 2, '输出目标方向：多或空'],
+    [2, 2, '按波动率倒数换算手数', '目标手数 = 单品种风险预算 ÷（日波动 × 合约乘数）。'],
+    [2, 3, '调仓单 = 目标手数 − 当前手数'],
+    [3, 4, '开盘后分批下单'],
+    [4, 3, '成交回报'],
+    [3, 2, '更新持仓与保证金占用']
+  ]},
+  tick: '分钟级同样有动量现象，但持续时间短、换手高，成本占比大。秒级以下更多表现为订单流的延续（见“订单流不平衡”）。商品期货上，夜盘开盘和重要数据公布后的几分钟，是日内趋势最集中的时段。',
+  stats: ['单笔盈亏的偏度：趋势策略应为正偏。', '胜率常在 30%–45%，靠盈亏比（平均盈利 ÷ 平均亏损）大于 2 维持正收益。', '与股票指数的相关性：危机时期常为负，这是 CTA 被称为“危机阿尔法”的原因。', '参数稳健性：均线长度在一个区间内变化时，结果应大致相似；只在一个点上好看，多半是过拟合。'],
+  params: [['回看长度', '决定捕捉哪种尺度的趋势。越短反应越快，噪声越多。'], ['波动率窗口', '估计仓位时用的波动率。'], ['目标波动率', '整个组合的年化风险水平。'], ['调仓缓冲', '信号变化很小时不调仓，节省成本。']],
+  money: '赚的是持续的价格移动。对手方是在趋势初期逆向交易的人，以及为转移价格风险而支付溢价的套保者。',
+  fail: '横盘震荡期反复止损（磨损）；V 形反转时回吐利润；参与者增多后信号拥挤；高换手版本中手续费和滑点占比大。',
+  terms: [['唐奇安通道', '过去 N 日最高价与最低价构成的上下轨。'], ['ATR', '平均真实波幅，衡量每日价格波动幅度。'], ['波动率目标', '按估计的波动率调整仓位，使风险接近固定水平。'], ['磨损', '震荡市中信号反复切换造成的连续小额亏损。']],
+  related: ['xsec', 'sizing', 'exec'], ma: [['cta', 'CTA 与趋势基金']],
+  refs: ['Moskowitz, Ooi, Pedersen (2012). Time Series Momentum. Journal of Financial Economics.', 'Hurst, Ooi, Pedersen (2017). A Century of Evidence on Trend-Following Investing. Journal of Portfolio Management.'],
+  widgets: [['策略示意：均线与通道突破', 'tsmom']] },
+
+{ id: 'xsec', g: 'T', name: '截面动量与期限结构', short: '截面与展期', en: 'Cross-Sectional Momentum & Carry',
+  hold: '每周或每月调仓', src: '风险溢价与行为偏差', mk: '商品期货 · 加密 · 股票',
+  phys: '排序后的台阶', pos: [6.45, 3, 0.4, 'l'],
+  one: '把一篮子品种按同一个指标排序，做多排名靠前的，做空排名靠后的，整体接近市场中性。',
+  shape: '每个调仓日，所有品种排成一列。看形状时关注两件事：一是按指标分成五组后，各组的后续收益是否从低到高单调上升，像一级级台阶；二是多空组合的净值是否平稳上行。台阶是否单调，比单个组合的收益高低更重要。',
+  does: [
+    '截面动量：按过去 1–12 个月收益排序，做多强势、做空弱势。与时间序列动量的区别是只看相对强弱，市场整体涨跌被多空两边抵消。',
+    '期限结构（carry）：商品期货按近远月价差的年化值排序。近月高于远月（反向市场）说明现货紧张，多头持有到期会获得展期收益；近月低于远月（正向市场）则相反。做多反向结构最强的品种，做空正向结构最强的品种。Koijen 等（2018）在商品、股票、债券、汇率中都找到了 carry 溢价。',
+    '国内商品常用的其他因子：仓单变化、库存、基差动量、会员持仓。加密货币可以用资金费率、交割合约基差作为 carry 指标。',
+    '组合：每组等权或按波动率倒数加权，多空两边的名义金额或风险相等。'
+  ],
+  flow: { lanes: ['全品种行情', '因子计算', '排序与组合', '执行', '交易所'], steps: [
+    [0, 1, '调仓日读取各品种主力与次主力价格'],
+    [1, 1, '计算动量与年化展期收益'],
+    [1, 2, '各因子标准化后合成一个分数'],
+    [2, 2, '排序：前 20% 做多，后 20% 做空'],
+    [2, 2, '按波动率倒数分配手数，多空风险相等'],
+    [2, 3, '调仓单：新增、减少、移仓'],
+    [3, 4, '按流动性分时段下单'],
+    [4, 3, '成交回报，记录换手率与成本']
+  ]},
+  tick: '秒级和分钟级很少用截面排序，因为同一时刻各品种的交易时段和流动性差别大。可以借用的是思路：在一组高相关品种（例如黑色系，或币安成交额最大的 20 个永续合约）里，短时间内涨得最多和最少的品种之间，常出现相对回归或延续，这是统计套利的高频版本。',
+  stats: ['信息系数 IC：因子值与下期收益的秩相关，单期常见 0.02–0.08。', '五组收益是否单调。', '多空组合的换手率和扣费后收益。', '因子之间的相关性，以及在不同年份是否稳定。'],
+  params: [['回看窗口', '动量用几个月的收益。'], ['分组比例', '多空各取多大比例的品种。'], ['调仓频率', '频率越高，换手越大。'], ['品种池', '剔除流动性差的合约。']],
+  money: '动量部分来自投资者对信息反应过慢；carry 部分是持有现货紧张品种多头的风险补偿，以及套保者支付的成本。',
+  fail: '动量崩溃：市场急剧反转时，前期最弱的品种暴涨，空头一侧大幅亏损。因子拥挤。国内活跃的商品期货约 70 个，分组后每组样本少，统计噪声大。',
+  terms: [['截面', '同一时刻多个品种之间比较。'], ['展期收益', '期货临近到期向现货收敛带来的收益。'], ['IC', '信息系数，因子值与未来收益的相关系数。'], ['市场中性', '多空金额或风险相等，组合对整体涨跌不敏感。']],
+  related: ['tsmom', 'calendar', 'overfit'], ma: [['cta', 'CTA 与趋势基金'], ['quant', '量化私募']],
+  refs: ['Jegadeesh, Titman (1993). Returns to Buying Winners and Selling Losers. Journal of Finance.', 'Koijen, Moskowitz, Pedersen, Vrugt (2018). Carry. Journal of Financial Economics.', 'Asness, Moskowitz, Pedersen (2013). Value and Momentum Everywhere. Journal of Finance.'],
+  widgets: [['策略示意：排序、分组与因子强度', 'xsec']] },
+
+/* ---------- 均值回归 ---------- */
+{ id: 'pairs', g: 'R', name: '配对交易与统计套利', short: '配对交易', en: 'Pairs Trading / Statistical Arbitrage',
+  hold: '数天到数周（高频版本为分钟级）', src: '价格关系的暂时偏离', mk: '商品期货 · 加密 · 股票',
+  phys: '弹簧', pos: [5.1, 1, 0.9, 'l'],
+  one: '找两个长期一起波动的品种，价差偏离常态时买入相对便宜的、卖出相对贵的，价差回到常态时平仓。',
+  shape: '两条价格曲线各自随机游走，但它们的差像系在弹簧上的小球，被拉开后会被拉回。弹簧的硬度用半衰期衡量，即偏离缩小一半所需的时间。半衰期短，交易机会多；半衰期很长或越来越长，说明弹簧断了。',
+  does: [
+    '选对：同一产业链（螺纹钢与热卷、豆油与棕榈油）、同一品种的不同市场（沪铜与伦铜）、高相关的加密资产（BTC 与 ETH）。先看经济上是否有理由联动，再做统计检验。',
+    '检验：协整检验（Engle-Granger 两步法或 Johansen 方法），估计对冲比例 β，使价差 A − β·B 平稳。',
+    '信号：价差减去滚动均值，再除以滚动标准差，得到 z 值。z 超过入场阈值（常用 2）时反向开仓，回到 0 附近平仓，超过止损阈值（例如 4）时止损。',
+    '多品种版本（统计套利）：用主成分或行业因子去掉一组品种的共同部分，交易剩下的残差。'
+  ],
+  flow: { lanes: ['行情', '价差模型', '风控', '执行', '交易所'], steps: [
+    [0, 1, '两个品种的最新价'],
+    [1, 1, '价差 = A − β·B，计算 z 值'],
+    [1, 2, 'z = +2.3，超过入场阈值'],
+    [2, 2, '检查两腿保证金与当日亏损上限'],
+    [2, 3, '卖 A、买 B'],
+    [3, 4, '两腿下单', '先下流动性差的一腿，成交后立刻下另一腿，缩短单腿暴露时间。'],
+    [4, 3, '两腿成交回报'],
+    [1, 2, 'z 回到 0 附近，发出平仓']
+  ]},
+  tick: '分钟级版本常用同一品种的近远月、不同交易所的同一资产，或同产业链的高相关品种，半衰期以分钟计。到秒级更接近领先滞后套利：价差偏离常由一边先动、另一边后动造成，回归速度取决于另一边的跟随速度。',
+  stats: ['协整检验的 p 值。', '价差的半衰期：对价差做 AR(1) 回归 ΔS = a + b·S，半衰期 = −ln2 ÷ ln(1 + b)。', 'z 超过阈值后回到 0 的比例与平均用时。', '对冲比例 β 是否随时间漂移。'],
+  params: [['入场阈值', '偏离多少倍标准差才开仓。'], ['滚动窗口', '估计均值和标准差的长度。'], ['止损阈值', '偏离继续扩大时的退出位置。'], ['对冲比例', '两腿的数量配比。']],
+  money: '赚的是价差的回归。对手方通常是只交易其中一腿、把价格暂时推离的大额订单。',
+  fail: '关系断裂：某个品种遇到产业政策、交割规则变化，或某个币出现专属消息，价差不再回归。两腿成交不同步带来单腿风险。做空受限（股票融券难，现货无法做空）。',
+  terms: [['协整', '两个非平稳序列的某个线性组合是平稳的。'], ['z 值', '偏离均值的标准差倍数。'], ['半衰期', '偏离缩小一半所需的时间。'], ['单腿风险', '只成交了一边时暴露在单边价格波动中。']],
+  related: ['vwaprev', 'crush', 'leadlag'], ma: [['quant', '量化私募']],
+  refs: ['Gatev, Goetzmann, Rouwenhorst (2006). Pairs Trading: Performance of a Relative-Value Arbitrage Rule. Review of Financial Studies.', 'Avellaneda, Lee (2010). Statistical Arbitrage in the US Equities Market. Quantitative Finance.'],
+  widgets: [['策略示意：价差、z 值与半衰期', 'pairs']] },
+
+{ id: 'vwaprev', g: 'R', name: '日内均值回归', short: '日内回归', en: 'Intraday Mean Reversion around VWAP',
+  hold: '几分钟到几小时，当日平仓', src: '短期冲击之后的回补', mk: '商品期货 · 加密 · 股票',
+  phys: '围绕中心线摆动', pos: [3.3, 0, 0.3, 'r'],
+  one: '价格在日内偏离成交量加权均价（VWAP）太远时反向开仓，等它回到均价附近。',
+  shape: '当天的 VWAP 是一条缓慢移动的中心线，价格围绕它摆动。偏离由大额订单的临时冲击造成，冲击过后挂单补回来，价格向中心线回落。在趋势日，中心线本身在移动，价格偏离后不回来。两种日子的形状完全不同，策略的成败取决于能否区分它们。',
+  does: [
+    '中心线：当日累计 VWAP，或滚动均线。也有版本用开盘价、前一日结算价作为锚。',
+    '带宽：中心线 ± k 倍偏离的滚动标准差，形式上类似布林带。',
+    '过滤：避开开盘前几分钟和重要数据公布时段；用当日已实现波动率或开盘后的方向性判断是否为趋势日，趋势日停止反向开仓。',
+    '退出：回到中心线平仓；偏离扩大到 2k 倍时止损；收盘前强制平仓。'
+  ],
+  flow: { lanes: ['行情', '指标', '信号与风控', '执行', '交易所'], steps: [
+    [0, 1, '每分钟更新成交量与价格'],
+    [1, 1, '累计 VWAP 与偏离标准差'],
+    [1, 2, '价格高于上轨'],
+    [2, 2, '检查今天是否已判定为趋势日'],
+    [2, 3, '卖出 1 手'],
+    [3, 4, '限价挂在卖一'],
+    [4, 3, '成交回报'],
+    [2, 3, '价格回到 VWAP，平仓']
+  ]},
+  tick: '这是分钟级最常见的策略形态之一。秒级上对应的是冲击回补：一笔大市价单吃掉几档后，盘口在几秒到几十秒内重新被填满，价格部分回落。可以用逐笔成交找出大单，统计之后 1–60 秒中间价的平均路径。',
+  stats: ['按偏离大小分组，画出之后 N 分钟的平均回归幅度。', '趋势日与震荡日分别的盈亏。', '止损触发的比例。', '每笔平均收益与手续费之比。'],
+  params: [['带宽倍数 k', '越大交易越少，每笔幅度越大。'], ['标准差窗口', '衡量当日偏离的尺度。'], ['趋势日过滤', '开盘后若干分钟的方向性指标。'], ['收盘平仓时间', '避免隔夜风险。']],
+  money: '赚的是临时冲击的回补，相当于在别人急于成交时提供流动性。',
+  fail: '趋势日连续止损；重大消息导致跳空；成交稀少的时段 VWAP 不稳定；带宽过窄时手续费吃掉利润。',
+  terms: [['VWAP', '成交量加权平均价，每笔成交价按成交量加权求平均。'], ['临时冲击', '大额订单造成、随后部分回落的价格变动。'], ['趋势日', '全天单方向移动、几乎不回到均价的交易日。']],
+  related: ['pairs', 'grid', 'exec'], ma: [['buyside', '资管交易台'], ['quant', '量化私募']],
+  refs: ['Bouchaud, Bonart, Donier, Gould (2018). Trades, Quotes and Prices. Cambridge University Press.'],
+  widgets: [['策略示意：震荡日与趋势日', 'vwaprev']] },
+
+{ id: 'grid', g: 'R', name: '网格交易', short: '网格', en: 'Grid Trading',
+  hold: '数小时到数周', src: '价格来回震荡', mk: '加密 · 商品期货',
+  phys: '向下弯的盈亏曲线', pos: [4.6, 0, 0.7, 'r'],
+  one: '在当前价格上下等距挂一排买单和卖单，价格每下跌一格买一份、每上涨一格卖一份，靠来回震荡赚取格距。',
+  shape: '网格的盈亏相对价格是一条向下弯的曲线。价格在中心附近来回摆动时，每完成一次一买一卖就锁定一个格距；价格单向走远时，库存越积越多，浮亏随距离的平方增长。这和卖出期权的形状相同，称为负 gamma。',
+  does: [
+    '设定：中心价、格距（等差或等比）、格数、每格数量。多数加密交易所提供内置的网格工具。',
+    '执行：所有网格单都是限价挂单，属于提供流动性，通常适用挂单费率。',
+    '风控：设置上下边界，价格离开区间后停止或平仓；用库存上限限制浮亏。',
+    '期货网格：可以双向持仓，价格上行时累积空头。'
+  ],
+  flow: { lanes: ['行情', '网格引擎', '风控', '交易所'], steps: [
+    [1, 3, '在中心价上下各挂 10 档限价单'],
+    [0, 1, '价格下跌一格'],
+    [3, 1, '这一档的买单成交'],
+    [1, 3, '在上一格补挂卖单'],
+    [0, 1, '价格回升一格'],
+    [3, 1, '卖单成交，完成一次来回，锁定一个格距'],
+    [1, 2, '每次成交后检查库存'],
+    [2, 1, '库存超过上限时停止加仓']
+  ]},
+  tick: '秒级和分钟级的做市可以看成格距为一跳的网格。区别是做市会根据库存和订单流移动报价，网格的价位固定。格距小于两次手续费加滑点时，网格交易越多亏越多。',
+  stats: ['来回次数 × 格距，即已实现收益。', '库存浮亏的最大值。', '价格在区间内停留的时间比例。', '已实现波动率与格距的比例。'],
+  params: [['格距', '越小成交越多，每次赚得越少。'], ['格数与边界', '决定能承受多大的单边移动。'], ['每格数量', '决定库存增长的速度。']],
+  money: '赚的是价格反复穿越格线的次数。等价于持续卖出波动率：价格的来回波动付钱给网格。',
+  fail: '单边行情中库存持续累积，浮亏增长；价格离开区间后网格停止工作，留下大量库存；格距小于成本时越交易越亏。',
+  terms: [['格距', '相邻两档挂单的价格间隔。'], ['负 gamma', '价格移动越远、亏损增长越快的盈亏形状。'], ['挂单费率', '限价单被动成交时的手续费，通常低于吃单。']],
+  related: ['mm', 'vwaprev', 'volsell'], ma: [['mm', '做市商'], ['retail', '散户']],
+  refs: [],
+  widgets: [['策略示意：格线、库存与盈亏', 'grid']] },
+
+/* ---------- 套利与价差 ---------- */
+{ id: 'basis', g: 'A', name: '期现基差套利', short: '期现基差', en: 'Cash-and-Carry Basis Trade',
+  hold: '到合约到期，数周到数月', src: '期货相对现货的溢价', mk: '加密 · 商品期货 · 股指',
+  phys: '在终点交汇的两条线', pos: [6.6, 1, 0.12, 'l'],
+  one: '买入现货、卖出价格更高的期货，持有到期。期货价格收敛到现货，锁定两者之差。',
+  shape: '两条价格线随市场一起上下，但它们之间的距离（基差）随着到期日临近被压到零，像两条在终点交汇的线。中途距离会抖动，带来账面浮动，终点是确定的。',
+  does: [
+    '加密：买入 BTC 现货，卖出交割合约（例如季度合约）。年化基差 = （期货 − 现货）÷ 现货 × 365 ÷ 剩余天数。牛市中年化基差可达 10%–30%，熊市接近零或为负。',
+    '商品期货：期货价格高于现货加持有成本时，买现货或仓单、卖期货，到期交割。需要仓库、质检、增值税发票等实物环节，通常由有现货渠道的机构完成。',
+    '股指期货：期货升水时买入成分股组合、卖出股指期货。国内股指期货长期贴水，方向常是反过来的。',
+    '保证金：现货腿和期货腿在不同账户。价格大涨时期货空头腿浮亏，需要及时补保证金，否则会被强平，套利变成单边头寸。',
+    '本页基差按“期货 − 现货”计算。国内现货行业习惯用“现货 − 期货”，符号相反。'
+  ],
+  flow: { lanes: ['现货账户', '套利程序', '期货账户', '交易所'], steps: [
+    [1, 1, '年化基差 18%，扣费后 16%'],
+    [1, 0, '买入 1 BTC 现货'],
+    [1, 2, '卖出 1 BTC 季度合约'],
+    [3, 1, '两腿成交回报'],
+    [1, 1, '每天检查期货保证金率'],
+    [1, 2, '价格上涨，期货腿浮亏，从现货账户调拨保证金'],
+    [3, 2, '到期按现货指数结算'],
+    [1, 1, '记录锁定的基差收益']
+  ]},
+  tick: '秒级关注的是入场和调仓时的执行：两腿用限价单还是市价单，两腿之间差多少时间。基差的日内波动可以用来择时，在基差瞬间放大时开仓，提高锁定的年化收益。',
+  stats: ['年化基差的时间序列与分布。', '扣除手续费、资金成本后的净年化。', '期货腿最大浮亏占名义金额的比例，它决定需要准备多少保证金。', '不同交易所之间的基差差异。'],
+  params: [['入场年化基差', '低于资金成本时不做。'], ['保证金余量', '留多少现金应对期货腿浮亏。'], ['到期选择', '近季或次季合约。']],
+  money: '赚的是期货溢价。对手方是愿意为杠杆多头支付溢价的期货买方。',
+  fail: '期货腿保证金不足被强平；交易所风险（暂停提币、倒闭）；基差为负时无法正向套利；资金成本上升后收益不足以覆盖。',
+  terms: [['基差', '期货价格与现货价格之差。'], ['交割', '合约到期时按规则以实物或现金结算。'], ['持有成本', '持有现货到期的资金利息、仓储、保险等费用。']],
+  related: ['funding', 'calendar', 'xex'], ma: [['commodity', '大宗商品贸易商'], ['hedger', '产业套保者']],
+  refs: [],
+  widgets: [['策略示意：基差收敛与期货腿浮亏', 'basis']] },
+
+{ id: 'funding', g: 'A', name: '资金费率套利', short: '资金费率', en: 'Funding Rate Arbitrage',
+  hold: '数天到数月', src: '永续合约多头支付的资金费', mk: '加密',
+  phys: '把永续拉回现货的弹簧', pos: [5.75, 1, 0.72, 'l'],
+  one: '买入现货、卖出等量永续合约，价格涨跌两边抵消，定期收取多头付给空头的资金费。',
+  shape: '永续合约没有到期日，靠资金费把价格拉向现货。永续价格高于现货时多头付钱给空头，这笔钱像弹簧的拉力，偏离越大拉力越大，但有上下限。资金费率序列的形状是：大部分时间贴在基准值 0.01% 上，牛市里成段抬高，暴跌后短暂转负。',
+  does: [
+    '公式（币安 U 本位，多数合约）：资金费率 = 平均溢价指数 + clamp（利率 − 平均溢价指数，−0.05%，+0.05%）。利率部分默认每 8 小时 0.01%。所以平均溢价指数在 −0.04% 到 0.06% 之间时，资金费率正好是 0.01%。部分合约的结算间隔是 4 小时或 1 小时，上下限也因合约不同，以交易所当前规则为准。',
+    '操作：资金费率持续为正时，买现货、卖永续，按名义金额收取资金费。持续为负时需要借币卖空现货，成本高，多数人只做正向。',
+    '择时：看过去若干期平均费率的年化值。高于开平成本的摊销和资金成本时开仓，低于阈值一半时平仓，中间留出缓冲，避免频繁开平。',
+    '跨交易所版本：在费率高的交易所做空永续，在费率低的交易所做多永续。'
+  ],
+  flow: { lanes: ['现货', '套利程序', '永续合约', '交易所'], steps: [
+    [3, 1, '公布本期资金费率', '也可以从实时溢价指数估计下一期费率。'],
+    [1, 1, '近 3 天平均费率年化 21%，高于阈值'],
+    [1, 0, '买入现货'],
+    [1, 2, '卖出等量永续'],
+    [3, 2, '结算时点：多头向空头支付资金费'],
+    [2, 1, '资金费入账'],
+    [1, 1, '平均费率降到阈值一半以下'],
+    [1, 0, '两腿同时平仓']
+  ]},
+  tick: '8 小时结算的合约在 UTC 0 点、8 点、16 点结算。结算前后几分钟，永续与现货的价差和盘口常有规律变化：有人在结算前开仓收费、结算后平仓。用逐笔成交和 100 毫秒盘口可以统计这段时间的价差路径。',
+  stats: ['费率序列的自相关：今天高，明天是否仍然高。', '年化净收益 = 累计资金费 − 开平成本。', '持仓时间占比。', '永续与现货价差的最大值，它影响保证金需求。'],
+  params: [['入场阈值（年化）', '覆盖成本之后才值得开仓。'], ['平均窗口', '用几期费率判断趋势。'], ['开平成本', '两腿各一次的手续费加滑点。']],
+  money: '赚的是杠杆多头为保持仓位支付的资金费。',
+  fail: '费率转负后要支付资金费；行情剧烈时永续空头腿保证金不足被强平；交易所风险；规则调整（结算间隔、上下限）。',
+  terms: [['永续合约', '没有到期日、用资金费锚定现货价格的期货合约。'], ['溢价指数', '永续价格相对现货指数的偏离程度。'], ['资金费', '多空双方按名义金额定期互相支付的费用。']],
+  related: ['basis', 'xex', 'cascade'], ma: [['exchange', '交易所'], ['retail', '散户']],
+  refs: ['Binance. Introduction to Binance Futures Funding Rates（交易所帮助中心，规则以当前版本为准）。'],
+  widgets: [['策略示意：费率序列、持仓与累计收益', 'funding']] },
+
+{ id: 'calendar', g: 'A', name: '跨期价差', short: '跨期价差', en: 'Calendar Spread',
+  hold: '数天到数月', src: '期限结构偏离持有成本', mk: '商品期货',
+  phys: '期限结构曲线的天花板', pos: [6.3, 1, 0.32, 'l'],
+  one: '同时买卖同一品种两个不同月份的合约，交易两者的价差，而不是价格本身。',
+  shape: '把同一品种各月份合约的价格按到期时间连起来，得到期限结构曲线。正向市场时曲线向上倾斜，斜率受持有成本（仓储、资金利息）限制，有一道天花板：远月比近月高出太多时，可以买近月、接货、存起来、在远月交割卖出。反向市场时曲线向下，但没有对称的地板，因为现货不能借来卖。',
+  does: [
+    '正套（买近卖远）：远近价差超过持有成本时进行，最终可以通过实物交割兑现，风险较低。需要交割资格和仓储安排，个人账户通常不能持仓进入交割月。',
+    '反套（卖近买远）：判断近月紧张会缓解、价差会收窄。没有交割兜底，本质是方向性判断。',
+    '季节性：农产品新旧作交替、能源的冬夏需求、黑色金属的开工季节，都会让价差有规律地变化。',
+    '移仓：主力合约切换时大量资金从近月转到远月，带来短期价差波动。'
+  ],
+  flow: { lanes: ['行情', '期限结构模型', '风控', '执行', '交易所'], steps: [
+    [0, 1, '读取各月份合约价格'],
+    [1, 1, '计算各价差与持有成本上限'],
+    [1, 2, '1–5 价差高出持有成本 60 元/吨'],
+    [2, 2, '检查交割资格与仓储安排'],
+    [2, 3, '买近月、卖远月'],
+    [3, 4, '交易所套利指令', '国内交易所提供跨期套利指令，两腿同时成交。'],
+    [4, 3, '成交回报'],
+    [1, 2, '价差回到成本以内时平仓，或持有到交割']
+  ]},
+  tick: '价差的秒级波动主要来自两腿流动性不同：主力合约先动，次主力跟随。高频价差交易者在两腿之间做市，赚价差的瞬时偏离。国内交易所的套利指令和组合保证金降低了这类交易的成本。',
+  stats: ['价差相对持有成本的位置。', '季节性：同一价差在历年同月的分布。', '移仓期间价差的波动幅度。', '两腿成交量之比。'],
+  params: [['持有成本', '仓储费、资金利率、交割费、损耗。'], ['价差阈值', '超过成本多少才开仓。'], ['合约对', '选择哪两个月份。']],
+  money: '正套赚的是价差超过持有成本的部分；反套和季节性交易赚的是对供需变化的判断。',
+  fail: '交割规则调整、仓单注册困难；近月被逼仓时价差瞬间扩大；个人账户临近交割月必须平仓，无法用交割兜底。',
+  terms: [['正向市场', '远月价格高于近月（contango）。'], ['反向市场', '近月价格高于远月（backwardation）。'], ['正套', '买近月、卖远月。'], ['仓单', '交割仓库开具的标准货物凭证。']],
+  related: ['basis', 'xsec', 'crush'], ma: [['commodity', '大宗商品贸易商'], ['hedger', '产业套保者']],
+  refs: ['Working (1949). The Theory of Price of Storage. American Economic Review.'],
+  widgets: [['策略示意：期限结构与持有成本上限', 'calendar']] },
+
+{ id: 'crush', g: 'A', name: '跨品种价差（压榨利润）', short: '压榨利润', en: 'Crush & Crack Spreads',
+  hold: '数周到数月', src: '产业链加工利润回到正常区间', mk: '商品期货',
+  phys: '天平', pos: [6.0, 1, 0.52, 'l'],
+  one: '交易原料与产成品之间的价差，例如大豆与豆粕、豆油之间的压榨利润，原油与汽油、柴油之间的裂解价差。',
+  shape: '压榨利润是一架天平：一边是产出（豆粕和豆油的价值），一边是投入（大豆加加工费）。利润太高时油厂开足产能，豆粕豆油供给增加，天平被压回；利润为负时油厂停机，产出减少，天平又被抬回。所以利润序列围绕加工成本来回摆动，拉回中心的力来自工厂的开工决策。',
+  does: [
+    '公式：1 吨大豆约产出 0.785 吨豆粕和 0.185 吨豆油（出粕率、出油率因豆源不同）。压榨利润 = 豆粕价 × 0.785 + 豆油价 × 0.185 − 大豆价 − 加工费。',
+    '合约配比：大商所豆二（对应进口大豆）、豆粕、豆油每手都是 10 吨，按 10 : 8 : 2 近似配比。油厂实际常用进口大豆到岸成本代替豆二价格。',
+    '交易：利润明显低于历史区间时买入利润（买豆粕、豆油，卖大豆），高于区间时卖出利润。',
+    '其他产业链：原油、汽油、柴油的 3:2:1 裂解价差；铁矿石、焦炭与螺纹钢之间的钢厂利润；PX、PTA 与聚酯之间的加工差。'
+  ],
+  flow: { lanes: ['行情', '利润模型', '风控', '执行', '交易所'], steps: [
+    [0, 1, '读取豆二、豆粕、豆油主力价格'],
+    [1, 1, '压榨利润 −120 元/吨'],
+    [1, 1, '对照历史：低于 10% 分位'],
+    [1, 2, '买入利润：买豆粕、豆油，卖大豆'],
+    [2, 2, '按 10 : 8 : 2 换算手数'],
+    [2, 3, '三腿下单指令'],
+    [3, 4, '三腿下单', '先下流动性最差的一腿。'],
+    [4, 3, '成交回报']
+  ]},
+  tick: '三腿流动性不同，豆粕最活跃，豆二较弱。秒级上常见豆粕先动、豆油和大豆跟随，也有交易者在利润瞬时偏离时做三腿套利。',
+  stats: ['利润的历史分布与分位。', '开工率与利润的关系（产业数据）。', '利润回归的半衰期。', '三腿之间的相关性。'],
+  params: [['出粕率与出油率', '决定公式中的系数。'], ['加工费', '电力、人工、折旧等。'], ['入场分位', '利润偏离到哪个分位才交易。']],
+  money: '赚的是加工利润回到正常区间的过程。对手方常是在单个品种上套保的产业资金，以及只看单一品种方向的投机者。',
+  fail: '结构性变化（进口政策、环保限产、需求转移）让利润中枢长期移动；三腿保证金占用高；进口大豆成本与豆二价格脱节。',
+  terms: [['压榨利润', '大豆加工成豆粕豆油后的毛利。'], ['裂解价差', '原油与成品油之间的价差。'], ['开工率', '工厂实际产量占产能的比例。']],
+  related: ['calendar', 'pairs', 'basis'], ma: [['commodity', '大宗商品贸易商'], ['hedger', '产业套保者']],
+  refs: [],
+  widgets: [['策略示意：压榨利润的天平', 'crush']] },
+
+{ id: 'xex', g: 'A', name: '跨交易所价差', short: '跨所价差', en: 'Cross-Exchange Arbitrage',
+  hold: '秒级到分钟级', src: '不同市场之间的暂时价差', mk: '加密 · 内外盘商品',
+  phys: '橡皮筋与成本带', pos: [1.4, 1, 0.5, 'r'],
+  one: '同一资产在两个交易所的价格出现差距，且差距超过两边手续费加滑点时，在便宜的一边买、贵的一边卖。',
+  shape: '两个交易所的价格像被一根橡皮筋连着。大部分时间差距在手续费构成的带子以内，这时什么都不做；偶尔一边先动，差距超出带子，超出的部分就是可以拿走的利润。手续费越低，带子越窄，能看到的机会越多。',
+  does: [
+    '库存模式：两个交易所都预先放好币和稳定币，有机会时两边同时吃单，不需要转账。两边库存失衡后，通过链上转账或反向交易再平衡。',
+    '成本：两边吃单手续费（高等级账户可以低到万分之几）、滑点、转账费、资金占用。手续费等级决定能看到多少机会，这是一个按规模分层的行业。',
+    '内外盘：沪铜与伦铜、沪金与纽约金、上海原油与布伦特，受汇率、关税、增值税、运输时间影响，价差的带子更宽，属于中低频的跨市场套利。',
+    '技术：接入多个交易所的行情，在本地维护订单簿，统一管理两边的仓位和风控。'
+  ],
+  flow: { lanes: ['交易所 A', '套利程序', '交易所 B'], steps: [
+    [0, 1, 'A 卖一 60,000'],
+    [2, 1, 'B 买一 60,090，差 15 个基点'],
+    [1, 1, '扣除两边成本 10 个基点，剩 5 个基点'],
+    [1, 0, '在 A 买入'],
+    [1, 2, '在 B 卖出'],
+    [0, 1, '成交回报'],
+    [2, 1, '成交回报'],
+    [1, 1, '更新两边库存，失衡时安排再平衡']
+  ]},
+  tick: '这是纯秒级的策略。关键量是两个交易所的行情到达延迟、下单延迟和成交率。价差机会多出现在一边剧烈波动、另一边跟随较慢的时候，与“领先滞后”是同一现象的两个侧面。',
+  stats: ['价差分布，尤其是尾部。', '超出成本带的次数与持续时间。', '成交率：看到机会后两腿都成交的比例。', '库存再平衡的成本。'],
+  params: [['成本带宽', '两边手续费加预期滑点。'], ['单次数量', '受两边盘口深度限制。'], ['库存上限', '每个交易所放多少资金。']],
+  money: '赚的是两个市场价格同步之前的差距。对手方是在一边集中交易、把价格暂时推离的人。',
+  fail: '交易所暂停提币或倒闭；一腿成交另一腿未成交；行情延迟导致看到的价差已经消失；手续费等级不够，机会全在带子以内。',
+  terms: [['吃单', '用市价单或可以立即成交的限价单与盘口成交。'], ['再平衡', '把多出来的资产从一个交易所转到另一个。'], ['内外盘', '国内期货与海外同类期货。']],
+  related: ['leadlag', 'funding', 'basis'], ma: [['hft', '高频交易'], ['exchange', '交易所']],
+  refs: ['Makarov, Schoar (2020). Trading and Arbitrage in Cryptocurrency Markets. Journal of Financial Economics.'],
+  widgets: [['策略示意：价差与成本带', 'xex']] },
+
+/* ---------- 微观结构与高频 ---------- */
+{ id: 'mm', g: 'M', name: '做市：排队与逆向选择', short: '做市', en: 'Market Making: Queues & Adverse Selection',
+  hold: '毫秒到分钟', src: '买卖价差与交易所返佣', mk: '加密 · 商品期货 · 期权',
+  phys: '成交后的价格路径', pos: [-0.3, 0, 0.5, 'r'],
+  one: '同时在买一和卖一挂单，被成交后赚取一半价差，再在另一边平掉库存。',
+  shape: '衡量做市好坏的核心图形是成交后的价格路径（markout）：每次买单被成交后，记录之后 1 秒、5 秒、30 秒的中间价变化，取平均。曲线从正的半个价差开始，随时间向下弯，因为成交你的人里有一部分掌握了方向信息，成交之后价格往对你不利的方向走。曲线最终停在零以上，做市才赚钱。',
+  does: [
+    '报价：围绕一个估计的公允价格两侧挂单，公允价格常用微观价格（见“盘口不平衡”）。库存偏多时整体下移报价（Avellaneda-Stoikov 模型）。',
+    '排队：多数期货和加密交易所按价格优先、时间优先撮合。最小价位变动（一跳）相对价格较大时，买一价上排着很长的队。排在前面的订单成交概率高；排在后面的订单只有在整档快被吃完时才成交，而整档被吃完往往意味着价格要穿过去，这正是逆向选择最严重的时刻。',
+    '撤单：信号显示价格即将移动时撤单或改价，降低被知情订单成交的概率。撤单速度是做市商之间竞争的主要方面。',
+    '交易所激励：做市商协议提供手续费减免或返佣，要求报价时间占比、最大价差和最小数量。'
+  ],
+  flow: { lanes: ['行情', '公允价格', '报价引擎', '风控', '交易所'], steps: [
+    [0, 1, '盘口变化：买一量减少'],
+    [1, 2, '公允价格下移 0.3 跳'],
+    [2, 4, '撤销买一挂单'],
+    [2, 4, '在买二重新挂单'],
+    [4, 2, '卖一挂单被成交，库存 −1'],
+    [2, 3, '检查库存上限'],
+    [2, 4, '报价整体上移，买单排到更靠前'],
+    [4, 2, '买单成交，库存回到 0']
+  ]},
+  tick: '这是最依赖逐笔数据的策略。以币安为例，100 毫秒的 20 档快照加逐笔成交，可以近似重建排队位置，并计算每笔成交后的 markout。国内期货 CTP 普通行情每 500 毫秒一次快照，看不到逐笔挂撤单，排队位置只能估计。',
+  stats: ['不同时间尺度的 markout 曲线。', '成交率：挂单被成交的比例。', '库存半衰期：库存回到零的速度。', '按对手方订单大小拆分的 markout。'],
+  params: [['报价宽度', '离公允价格多远。'], ['库存上限', '最多持有多少净头寸。'], ['撤单阈值', '信号多强时撤单。'], ['排队策略', '是否提前在某个价位排队。']],
+  money: '赚的是价差和返佣，付出的是被知情交易者成交后的不利价格移动。',
+  fail: '剧烈行情中被单边成交、库存迅速累积；撤单比竞争对手慢；交易所系统故障时无法撤单；返佣政策调整。',
+  terms: [['markout', '成交后一段时间的中间价变化，衡量成交质量。'], ['逆向选择', '愿意和你成交的人，恰好掌握对你不利的信息。'], ['价格优先、时间优先', '先比价格，同价按挂单先后成交。'], ['一跳', '最小价格变动单位。']],
+  related: ['obi', 'ofi', 'grid'], ma: [['mm', '做市商'], ['hft', '高频交易'], ['exchange', '交易所']],
+  refs: ['Glosten, Milgrom (1985). Bid, Ask and Transaction Prices in a Specialist Market with Heterogeneously Informed Traders. Journal of Financial Economics.', 'Avellaneda, Stoikov (2008). High-Frequency Trading in a Limit Order Book. Quantitative Finance.', 'Moallemi, Yuan (2016). A Model for Queue Position Valuation in a Limit Order Book. Working paper.'],
+  widgets: [['策略示意：队首与队尾的 markout', 'mm']] },
+
+{ id: 'obi', g: 'M', name: '盘口不平衡与微观价格', short: '盘口不平衡', en: 'Order Book Imbalance & Micro-Price',
+  hold: '百毫秒到数秒', src: '对下一次价格变动方向的预测', mk: '加密 · 商品期货',
+  phys: '盘口的重心', pos: [0.2, 2, 0.68, 'r'],
+  one: '比较买一和卖一的挂单量。挂单少的一边更容易被吃穿，价格更可能朝那边移动一跳。',
+  shape: '把盘口看成一根杆：左端是买一价，右端是卖一价，两端挂的量是两端的重量。重心所在的位置就是微观价格。买单远多于卖单时，重心靠近卖一价，下一次价格变动更可能向上。对应的统计形状是一条 S 形曲线：横轴是不平衡度，纵轴是下一次变动向上的概率。',
+  does: [
+    '不平衡度 I = 买一量 ÷（买一量 + 卖一量），取值在 0 到 1 之间。',
+    '微观价格 = 卖一价 × I + 买一价 × (1 − I)。Stoikov（2018）给出了更严格的版本，用不平衡度和价差状态的转移概率迭代估计。',
+    '多档版本：对前几档加权求和，越远的档权重越小；或者把各档挂单量作为特征输入模型。',
+    '用途：作为做市的公允价格；作为吃单的触发条件（不平衡度很极端且价差为一跳时市价成交）；作为执行算法判断是否继续等待的依据。'
+  ],
+  flow: { lanes: ['行情', '特征', '模型', '执行', '交易所'], steps: [
+    [0, 1, '新快照：买一 40 手，卖一 15 手'],
+    [1, 1, '不平衡度 0.73，价差一跳'],
+    [1, 2, '下一次变动向上的概率 0.67'],
+    [2, 3, '概率超过阈值，预期收益大于成本'],
+    [3, 4, '在卖一买入'],
+    [4, 3, '成交'],
+    [2, 3, '不平衡度回到中性，挂单卖出'],
+    [3, 4, '挂单']
+  ]},
+  tick: '币安的 20 档 100 毫秒快照可以直接计算各档不平衡度。国内期货 CTP 普通行情每 500 毫秒一次快照，档数取决于交易所和行情级别，两次快照之间可能已经发生多次变化，信号需要按这个采样间隔单独检验。',
+  stats: ['按不平衡度分箱，统计下一次中间价变动的方向频率，看是否呈 S 形。', '信号衰减：分别预测 100 毫秒、1 秒、10 秒后的变化，准确率如何下降。', '扣除价差和手续费后是否仍有正期望。', '价差为一跳和多跳时分别检验。'],
+  params: [['档数与权重', '只用一档，还是前几档加权。'], ['触发阈值', '不平衡度或预测概率超过多少才下单。'], ['持有时长', '开仓后多久平仓，或等待几次价格变动。']],
+  money: '赚的是对下一跳方向的预测。对手方是没有观察盘口的成交者，以及没有及时撤单的挂单者。',
+  fail: '挂单可以瞬间撤销，不平衡度可能被虚假挂单操纵；一跳的收益常小于吃单费；信号被许多参与者使用后衰减。',
+  terms: [['不平衡度', '买卖挂单量的相对比例。'], ['微观价格', '按挂单量加权的买卖价，比中间价更接近下一次成交价格。'], ['价差状态', '买一和卖一之间相差几跳。']],
+  related: ['ofi', 'mm', 'leadlag'], ma: [['hft', '高频交易'], ['exchange', '交易所']],
+  refs: ['Stoikov (2018). The Micro-Price: A High-Frequency Estimator of Future Prices. Quantitative Finance.', 'Cartea, Jaimungal, Penalva (2015). Algorithmic and High-Frequency Trading. Cambridge University Press.'],
+  widgets: [['策略示意：盘口重心与 S 形曲线', 'obi']] },
+
+{ id: 'ofi', g: 'M', name: '订单流不平衡', short: '订单流不平衡', en: 'Order Flow Imbalance (OFI)',
+  hold: '秒到分钟', src: '订单流对价格的推动', mk: '加密 · 商品期货',
+  phys: '推力与质量', pos: [1.0, 2, 0.3, 'r'],
+  one: '统计一段时间内买方挂单增加、卖方挂单撤销和主动买入的总量，减去卖方的对应量。这个净流量与同期价格变动近似成正比。',
+  shape: '这是一个力与质量的关系。净订单流（OFI）是推力，盘口深度是质量，价格变动是位移。同样的推力，盘口薄时价格移动大，盘口厚时移动小，散点图上是一条斜率约为“1 ÷ 深度”的直线。需要注意：这条直线描述的是同一时段内的关系。用这一段的 OFI 去预测下一段的价格，直线会变得很平。',
+  does: [
+    '逐事件 OFI（Cont、Kukanov、Stoikov 2014）：每次盘口更新，买一价上升或不变时加上新的买一量，买一价下降或不变时减去旧的买一量；卖一侧方向相反。把一个时间窗内的事件累加。',
+    '回归：Δ中间价 = β × OFI + 噪声，β 与平均深度成反比。论文在美股上的同期 R² 平均约 65%，明显高于只用成交量的模型。',
+    '预测用法：利用订单流的持续性（大单常拆成多笔）、多档 OFI、不同时间窗 OFI 的组合，预测下一段收益。预测力比同期解释力小得多。',
+    '主动成交不平衡：只用逐笔成交的主动买量减主动卖量，数据要求更低。'
+  ],
+  flow: { lanes: ['逐笔与盘口', 'OFI 累加', '模型', '执行', '交易所'], steps: [
+    [0, 1, '买一价不变，挂单量从 30 增到 42'],
+    [1, 1, '事件贡献 e = +12'],
+    [0, 1, '主动卖出 5 手，买一量降到 37'],
+    [1, 1, '事件贡献 e = −5'],
+    [1, 2, '10 秒窗口 OFI = +85，平均深度 40'],
+    [2, 2, '预测下一窗口上涨 0.2 跳，低于成本'],
+    [2, 3, '不交易'],
+    [0, 1, '继续累加下一次更新']
+  ]},
+  tick: '币安的归集成交带有主动方向标记，可以直接算主动成交不平衡；100 毫秒盘口快照可以算近似的 OFI，快照之间的多次变化被合并成一次。国内期货可以用相邻快照之间成交量和价格的变化推断主动方向，但精度较低。',
+  stats: ['同期回归的斜率与 R²；按深度分组，看斜率是否与深度成反比。', '预测回归（下一窗口）的斜率与 R²。', 'OFI 的自相关。', '不同窗口长度下的结果。'],
+  params: [['窗口长度', '累加多长时间内的事件，常用 1–60 秒。'], ['使用档数', '只用最优一档，还是前几档分别计算。'], ['深度归一化', 'OFI 除以平均深度，使不同时段可以比较。']],
+  money: '预测用法赚的是订单流延续带来的价格移动。对手方是被动挂单、没有及时撤单的一方。',
+  fail: '同期关系很强、预测关系很弱，把同期关系误当成预测能力是常见错误。冰山单和频繁撤单让观察到的流量失真。',
+  terms: [['OFI', '订单流不平衡，买方挂单与成交的净增量减去卖方的净增量。'], ['深度', '某一档或前几档的挂单量。'], ['同期与预测', '同一时段内的关系，以及用当前预测下一时段。'], ['主动方向', '成交由买方还是卖方主动发起。']],
+  related: ['obi', 'mm', 'cascade'], ma: [['hft', '高频交易']],
+  refs: ['Cont, Kukanov, Stoikov (2014). The Price Impact of Order Book Events. Journal of Financial Econometrics.', 'Kolm, Turiel, Westray (2023). Deep Order Flow Imbalance: Extracting Alpha at Multiple Horizons from the Limit Order Book. Mathematical Finance.'],
+  widgets: [['策略示意：推力、质量与位移', 'ofi']] },
+
+{ id: 'leadlag', g: 'M', name: '领先滞后与延迟套利', short: '领先滞后', en: 'Lead-Lag & Latency Arbitrage',
+  hold: '毫秒到秒', src: '信息在市场之间传播的时间差', mk: '加密 · 商品期货 · 股指',
+  phys: '向右平移的曲线', pos: [-1.0, 2, 0.3, 'r'],
+  one: '一个市场的价格先动，相关市场稍后跟随。在跟随的市场还没反应时下单。',
+  shape: '两条几乎一样的曲线，其中一条整体向右平移了一小段，这段平移就是滞后时间。把两条曲线的收益在不同时间差下求相关，相关系数在等于滞后时间的位置出现尖峰。如果你的系统延迟大于这段平移，尖峰对你就不存在。',
+  does: [
+    '常见的领先关系：加密市场里永续合约领先现货（多数成交在永续）；大币领先小币；主力合约领先次主力；夜盘时海外市场领先国内（伦铜与沪铜、美原油与上海原油）；股指期货领先成分股。',
+    '延迟套利：领先市场一动，立即在滞后市场吃掉还没更新的挂单。这要求行情接收、计算、下单的总延迟明显小于滞后时间，是托管机房、专线和 FPGA 的竞争领域。',
+    '较慢的版本：滞后几百毫秒到几秒的关系，个人系统也可能参与，但需要用逐笔数据检验。'
+  ],
+  flow: { lanes: ['领先市场', '信号', '执行', '滞后市场'], steps: [
+    [0, 1, '永续中间价上涨 3 个基点'],
+    [1, 1, '现货尚未变化，预计跟随'],
+    [1, 2, '预期收益 2.4 个基点，高于吃单费'],
+    [2, 3, '在现货卖一买入'],
+    [3, 2, '成交，耗时 18 毫秒'],
+    [0, 1, '现货价格跟上'],
+    [2, 3, '挂单卖出平仓'],
+    [3, 2, '成交']
+  ]},
+  tick: '币安现货和 U 本位永续的逐笔成交带毫秒时间戳，可以直接计算两者收益在不同时间差下的相关性。国内期货 500 毫秒一次快照，意味着短于 500 毫秒的领先关系无法从普通行情中观察到。',
+  stats: ['互相关函数：不同时间差下的相关系数。', 'Hayashi-Yoshida 估计量，用于两边成交时间不同步的情况。', '按时段、波动水平分组的滞后时间。', '跟随幅度与领先幅度之比。'],
+  params: [['触发幅度', '领先市场移动多少才行动。'], ['持有时间', '等待滞后市场跟随的最长时间。'], ['系统延迟', '行情到达、计算、下单的总时间。']],
+  money: '赚的是滞后市场的挂单者没有及时更新报价造成的损失。',
+  fail: '更快的对手先拿走机会；领先关系在市场结构变化后改变（例如现货成交占比上升）；交易所限速、撤单收费。',
+  terms: [['互相关', '一个序列与另一个平移后序列的相关系数。'], ['托管机房', '把服务器放在交易所机房里，缩短网络距离。'], ['陈旧报价', '没有及时随市场更新的挂单。']],
+  related: ['xex', 'obi', 'ofi'], ma: [['hft', '高频交易']],
+  refs: ['Hayashi, Yoshida (2005). On Covariance Estimation of Non-Synchronously Observed Diffusion Processes. Bernoulli.', 'Budish, Cramton, Shim (2015). The High-Frequency Trading Arms Race. Quarterly Journal of Economics.'],
+  widgets: [['策略示意：平移、互相关与你的延迟', 'leadlag']] },
+
+{ id: 'cascade', g: 'M', name: '强平连锁与事件交易', short: '强平连锁', en: 'Liquidation Cascades & Event Trading',
+  hold: '秒到小时', src: '被迫交易造成的价格偏离', mk: '加密 · 商品期货',
+  phys: '沙堆与放大', pos: [2.6, 2, 0.68, 'r'],
+  one: '杠杆仓位被强制平仓时，强平单推动价格，进一步触发更多强平。交易者在连锁开始时顺势，结束时反向。',
+  shape: '强平价格在价格轴上的分布像一堆沙子。多数杠杆多头的强平价位在当前价格下方几个百分点到二十几个百分点之间。价格跌到沙堆边缘时，一部分仓位被强平，强平卖单把价格再推低，又碰到更多仓位。一个小的初始下跌可能被放大成大的下跌，放大倍数取决于沙堆离当前价格多近（平均杠杆）和盘口能吸收多少卖单（深度）。',
+  does: [
+    '数据：交易所公布的强平订单流（币安有强平订单推送）、持仓量、资金费率、多空比。持仓量快速下降同时价格快速下跌，说明强平正在发生。',
+    '顺势：连锁开始的早期跟随方向，持有到强平流减弱。',
+    '反向：连锁结束时价格常过度偏离，强平停止后有回补。判断结束的依据是强平量和持仓量下降速度放缓。',
+    '其他事件：国内期货的涨跌停与扩板规则、交割月限仓、宏观数据公布、交易所规则变更、资金费率结算时点。'
+  ],
+  flow: { lanes: ['强平流与持仓', '事件检测', '风控', '执行', '交易所'], steps: [
+    [0, 1, '1 分钟强平量是过去均值的 12 倍'],
+    [1, 1, '持仓量 1 分钟下降 2%，判定连锁开始'],
+    [1, 2, '检查当前价差与盘口深度'],
+    [2, 3, '小仓位顺势卖出'],
+    [0, 1, '强平量开始回落'],
+    [1, 3, '平掉顺势仓位'],
+    [1, 3, '强平停止后限价买入'],
+    [4, 3, '成交回报']
+  ]},
+  tick: '研究这个策略需要强平订单流和持仓量数据，只有成交和盘口时，可以从同一毫秒内大量同方向成交、价格连续跨档来推断连锁。币安的强平推送和持仓量接口都可以采集。',
+  stats: ['强平流与之后 1–30 分钟收益的关系。', '连锁结束后的回补幅度分布。', '初始下跌与最终下跌之比（放大倍数）。', '持仓量下降与价格变动的关系。'],
+  params: [['连锁判定阈值', '强平量和持仓量变化达到多少算开始。'], ['顺势持有时长', '跟随多久，或强平量降到多少时退出。'], ['反向入场条件', '强平停止后，价格偏离多少才反向。']],
+  money: '赚的是被迫交易者以不利价格成交的损失。',
+  fail: '判断错连锁的开始或结束；极端行情中价差扩大、滑点很大；交易所在极端行情中宕机或限流；自己的仓位也可能被强平。',
+  terms: [['强平', '保证金不足时交易所强制平仓。'], ['持仓量', '未平仓合约总数。'], ['扩板', '连续涨跌停后交易所扩大涨跌停幅度。'], ['自动减仓', '强平单无法在市场成交时，由盈利方按顺序被动减仓。']],
+  related: ['ofi', 'funding', 'sizing'], ma: [['exchange', '交易所'], ['retail', '散户'], ['ccp', '中央对手方']],
+  refs: [],
+  widgets: [['策略示意：强平价分布与放大', 'cascade']] },
+
+/* ---------- 波动率 ---------- */
+{ id: 'volsell', g: 'V', name: '卖出波动率', short: '卖波动率', en: 'Short Volatility / Variance Risk Premium',
+  hold: '数天到数月', src: '方差风险溢价', mk: '商品期权 · 股指期权 · 加密期权',
+  phys: '缓坡与断崖', pos: [5.55, 3, 0.65, 'l'],
+  one: '卖出期权并用期货对冲方向，收取期权价格里隐含波动率高于实际波动率的部分。',
+  shape: '净值曲线是一段段缓慢上升的坡，中间偶尔有陡峭的断崖。每日盈亏的分布：大部分落在略高于零的窄范围内，左侧有一条很长的尾巴。这与网格交易是同一种形状，收益来自平静，亏损来自剧烈移动。',
+  does: [
+    '收益来源：期权的隐含波动率长期平均高于事后的实现波动率。买方愿意为防范大跌多付钱，卖方承担尾部风险，因此得到补偿，这部分称为方差风险溢价。',
+    '操作：卖出平值跨式或宽跨式，按 delta 用期货对冲；或交易方差互换。',
+    '风险控制：卖出的同时买入更虚值的期权限制最大亏损（铁鹰式价差）；控制 vega 和 gamma 敞口；重大事件前减仓。',
+    '可交易的市场：国内商品期权（铜、黄金、豆粕、原油等）、股指期权（沪深 300、中证 1000 等）；加密期权（Deribit、币安等）。'
+  ],
+  flow: { lanes: ['波动率曲面', '策略', '对冲引擎', '交易所'], steps: [
+    [0, 1, '隐含波动率 62%，近 30 天实现波动率 48%'],
+    [1, 1, '溢价高于阈值，下周无重大事件'],
+    [1, 3, '卖出平值跨式'],
+    [3, 2, '成交，组合 delta 约为 0'],
+    [0, 2, '价格上涨 1.5%，delta 变为 −0.3'],
+    [2, 3, '买入期货，对冲回 0'],
+    [2, 2, '每天累计收取时间价值'],
+    [1, 3, '到期或提前平仓']
+  ]},
+  tick: '秒级到分钟级的工作在对冲环节：多久对冲一次，用时间还是价格移动幅度触发。对冲越频繁，路径风险越小，手续费越高。',
+  stats: ['隐含与实现波动率之差的历史分布。', '每日盈亏的偏度和峰度，应为明显负偏。', '最大回撤与年收益之比。', '溢价在市场危机前后的变化。'],
+  params: [['到期选择', '近月时间价值衰减快，gamma 风险也大。'], ['行权价选择', '平值收益最高；虚值的尾部风险更集中。'], ['对冲频率', '按时间或按价格移动幅度对冲。'], ['尾部保护', '是否买入更虚值的期权限制最大亏损。']],
+  money: '赚的是期权买方为保险支付的溢价。',
+  fail: '跳空：价格一步跨过很远，来不及对冲；波动率上升时需要追加保证金，可能在最不利的时候被迫平仓。',
+  terms: [['隐含波动率', '从期权价格反推出的波动率。'], ['实现波动率', '事后按实际价格计算的波动率。'], ['跨式', '同时买入或卖出同一行权价的看涨和看跌期权。'], ['vega', '期权价值对波动率的敏感度。']],
+  related: ['gamma', 'grid', 'sizing'], ma: [['ib-dealer', '投行交易台']],
+  refs: ['Carr, Wu (2009). Variance Risk Premiums. Review of Financial Studies.', 'Bakshi, Kapadia (2003). Delta-Hedged Gains and the Negative Market Volatility Risk Premium. Review of Financial Studies.'],
+  widgets: [['策略示意：每日盈亏的形状', 'volsell']] },
+
+{ id: 'gamma', g: 'V', name: '伽马交易', short: '伽马交易', en: 'Gamma Scalping',
+  hold: '数天到数周，对冲在日内进行', src: '实现波动率高于隐含波动率', mk: '期权',
+  phys: '抛物线与切线', pos: [5.15, 2, 0.88, 'r'],
+  one: '买入期权，并持续用期货对冲方向。价格来回波动时低买高卖期货，用这部分收益覆盖期权的时间价值损耗。',
+  shape: '期权价值相对标的价格是一条向上弯的抛物线；对冲后的头寸等于抛物线减去它在当前价格处的切线。价格向任一方向移动，抛物线都高于切线，两者之间的空隙就是这次移动的收益，大小是 ½ × Γ × 移动幅度²。每天要为这条抛物线支付时间价值（theta）。实际波动的平方累积起来超过时间价值，就赚钱。',
+  does: [
+    '建仓：买入平值跨式，组合 delta 接近零，gamma 为正。',
+    '对冲：价格上涨后 delta 变正，卖出期货回到零；下跌后买入。每次对冲都是在高处卖、低处买。',
+    '对冲规则：按固定时间间隔，或按价格移动阈值（带宽）触发。理论上两种方式的期望收益相近，收益的波动不同。',
+    '与卖出波动率是同一笔交易的两边：买方押注实现波动率高于隐含波动率。'
+  ],
+  flow: { lanes: ['行情', '对冲引擎', '期货', '期权'], steps: [
+    [1, 3, '买入平值跨式，delta = 0'],
+    [0, 1, '价格上涨 1%'],
+    [1, 1, 'delta 变为 +0.2'],
+    [1, 2, '卖出期货，delta 回到 0'],
+    [0, 1, '价格回落 1%'],
+    [1, 1, 'delta 变为 −0.2'],
+    [1, 2, '买回期货，锁定一次对冲收益'],
+    [3, 1, '记录当天的 theta 损耗']
+  ]},
+  tick: '秒级到分钟级的数据决定对冲带宽怎么设。日内实现波动率集中在开盘、收盘和数据公布时，这会影响什么时候对冲更有利。可以用逐笔数据回放不同带宽下的对冲收益和手续费。',
+  stats: ['实现波动率与隐含波动率之差。', '对冲收益减去 theta 的累计。', '对冲次数与手续费。', '不同带宽下收益的波动。'],
+  params: [['对冲带宽', '价格移动多少才对冲。'], ['期权到期', '越近 gamma 越大，theta 也越大。'], ['行权价', '平值附近 gamma 最大。']],
+  money: '赚的是实现波动率超过隐含波动率的部分。',
+  fail: '市场持续平静，theta 持续损耗；对冲成本过高；隐含波动率下降导致期权价值下降（vega 损失）。',
+  terms: [['gamma', 'delta 对标的价格的变化率。'], ['theta', '期权每天的时间价值损耗。'], ['delta 中性', '组合对标的小幅价格变动不敏感。']],
+  related: ['volsell', 'grid', 'exec'], ma: [],
+  refs: ['Sinclair (2013). Volatility Trading, 2nd ed. Wiley.'],
+  widgets: [['抛物线与切线', 'gammaA'], ['策略示意：对冲收益与时间价值', 'gamma']] },
+
+/* ---------- 研究与执行 ---------- */
+{ id: 'exec', g: 'S', name: '执行算法与冲击成本', short: '执行', en: 'Execution Algorithms & Market Impact',
+  hold: '分钟到数天', src: '降低成本，本身不产生收益', mk: '所有市场',
+  phys: 'U 形成本曲线',
+  one: '把一笔大单拆成许多小单，在冲击成本和等待期间的价格风险之间找平衡。',
+  shape: '有两条曲线：成交越快，冲击成本越高；成交越慢，等待期间价格漂移的风险越大。两者相加是一个 U 形，谷底就是最优执行时长。另一个形状是平方根律：冲击成本与订单规模的平方根成正比，订单放大 4 倍，单位成本只增加 1 倍。',
+  does: [
+    'TWAP 在时间上均匀拆单；VWAP 按历史成交量分布拆单；POV 按市场成交量的固定比例跟随；IS（实施差额）按 Almgren-Chriss 模型权衡冲击与风险，通常开始快、后面慢。',
+    '平方根律：冲击 ≈ Y × σ × √(Q ÷ V)。σ 是日波动率，Q 是订单量，V 是日成交量，Y 是接近 1 的常数。这一关系在股票、期货、加密市场都被观察到。',
+    '子单层面：挂单还是吃单，挂在哪一档，等多久转为吃单。这一层用到盘口不平衡等短期信号。',
+    '评估：成交均价与到达价（开始执行时的中间价）之差，称为执行差额。'
+  ],
+  flow: { lanes: ['策略', '执行算法', '子单路由', '交易所'], steps: [
+    [0, 1, '目标：2 小时内买入 200 手'],
+    [1, 1, '按成交量分布生成时间表'],
+    [1, 2, '本时段目标 18 手'],
+    [2, 2, '盘口偏多，挂在买一等待'],
+    [2, 3, '挂单 6 手'],
+    [3, 2, '成交 4 手'],
+    [2, 3, '进度落后，吃单 2 手'],
+    [1, 0, '报告执行差额 +1.8 个基点']
+  ]},
+  tick: '对个人量化交易者，冲击成本主要决定策略容量。单笔订单小于盘口一档深度时，冲击可以忽略，成本主要是价差和手续费；资金放大以后，冲击成本按平方根增长，原本盈利的高频信号可能变成亏损。',
+  stats: ['执行差额的均值与分布。', '按参与率分组的冲击成本。', '冲击成本随订单规模的曲线，检验是否符合平方根律。', '临时冲击与永久冲击的比例。'],
+  params: [['执行时长', '完成整笔订单的时间。'], ['参与率上限', '每个时段最多占市场成交量的比例。'], ['挂单与吃单比例', '挂单省价差，但可能不成交。']],
+  money: '本身不产生收益。省下的成本直接增加策略的净收益。',
+  fail: '拆单模式被其他算法识别，信息泄露；市场流动性突然枯竭；时间表过于刚性。',
+  terms: [['到达价', '开始执行时的中间价。'], ['参与率', '自己的成交量占市场成交量的比例。'], ['临时冲击', '执行期间造成、之后回落的价格变动。'], ['永久冲击', '执行结束后仍然保留的价格变动。']],
+  related: ['vwaprev', 'sizing', 'overfit'], ma: [['buyside', '资管交易台'], ['block', '大宗交易']],
+  refs: ['Almgren, Chriss (2000). Optimal Execution of Portfolio Transactions. Journal of Risk.', 'Tóth, Lempérière, Deremble, de Lataillade, Kockelkoren, Bouchaud (2011). Anomalous Price Impact and the Critical Nature of Liquidity in Financial Markets. Physical Review X.'],
+  widgets: [['策略示意：U 形成本与平方根律', 'exec']] },
+
+{ id: 'sizing', g: 'S', name: '仓位与风控', short: '仓位', en: 'Position Sizing & Risk Control',
+  hold: '贯穿所有周期', src: '决定优势能变成多少长期增长', mk: '所有市场',
+  phys: '拱形的增长率曲线',
+  one: '决定每次下多大的注。太小浪费优势，太大会让一串亏损把账户打到无法恢复。',
+  shape: '长期增长率随仓位比例是一条拱形曲线：从零开始上升，在凯利仓位处到达顶点，之后下降，在两倍凯利附近回到零，再往后为负。也就是说，期望收益为正的策略，下注过大也会长期亏光。拱顶很平：用一半凯利仓位，增长率仍有顶点的 75%，波动却小得多。',
+  does: [
+    '凯利公式（二元下注）：f* = p − (1 − p) ÷ b，p 是胜率，b 是盈亏比。连续收益的版本：f* = μ ÷ σ²。',
+    '实际使用：p、b、μ 都是估计值，误差很大，通常只用 1/4 到 1/2 的凯利仓位。',
+    '波动率目标：按近期波动率调整仓位，使组合风险保持在目标水平。',
+    '风控层：单笔最大亏损、单日最大亏损、回撤到某个水平时减仓、品种集中度上限、保证金占用上限。高频策略还要限制每秒订单数、撤单比，并防止自成交。'
+  ],
+  flow: { lanes: ['策略信号', '仓位模块', '风控', '执行'], steps: [
+    [0, 1, '信号：做多，估计胜率 55%，盈亏比 1.0'],
+    [1, 1, '凯利仓位 10%，取一半为 5%'],
+    [1, 1, '按当前波动率换算手数'],
+    [1, 2, '检查单日亏损、保证金、集中度'],
+    [2, 1, '保证金占用超限，削减为 3 手'],
+    [1, 3, '下单 3 手'],
+    [3, 2, '成交回报，更新风险占用']
+  ]},
+  tick: '高频策略单笔下注小、次数多，胜率和盈亏比估计得相对准确；真正的风险来自断网、交易所故障、程序错误等极端事件。风控需要在交易程序之外独立运行，并且能一键撤单、平仓。',
+  stats: ['按仓位比例模拟的增长率曲线。', '最大回撤的分布（蒙特卡洛模拟）。', '连续亏损次数的分布。', '风控规则的触发频率。'],
+  params: [['凯利比例', '实际使用凯利仓位的几分之几，通常 0.25–0.5。'], ['目标波动率', '组合年化波动率的目标值。'], ['回撤减仓阈值', '净值回撤到多少时降低仓位。']],
+  money: '本身不产生收益，决定同一个优势能变成多少长期增长。',
+  fail: '高估胜率导致下注过大；危机中品种相关性上升，分散失效；风控只写在交易程序内部，程序出错时一起失效。',
+  terms: [['凯利仓位', '使长期对数财富增长最快的下注比例。'], ['破产风险', '账户跌到无法继续交易的概率。'], ['自成交', '自己的买单和卖单互相成交，多数交易所禁止。']],
+  related: ['overfit', 'exec', 'tsmom'], ma: [],
+  refs: ['Kelly (1956). A New Interpretation of Information Rate. Bell System Technical Journal.', 'Thorp (2006). The Kelly Criterion in Blackjack, Sports Betting and the Stock Market. Handbook of Asset and Liability Management.'],
+  widgets: [['策略示意：增长率拱形与三条净值', 'sizing']] },
+
+{ id: 'overfit', g: 'S', name: '回测与过拟合', short: '回测', en: 'Backtesting & Overfitting',
+  hold: '贯穿所有周期', src: '避免把运气当成能力', mk: '所有市场',
+  phys: '随机曲线里最好的那一条',
+  one: '试的参数和想法越多，越容易找到一条回测很好、实际没有优势的净值曲线。',
+  shape: '把一千条纯随机的净值曲线放在一起，挑出最好的一条，它看起来像一个稳定盈利的策略。判断一个策略是否真有优势，最直接的方法是把它的净值曲线和一组用打乱数据生成的曲线混在一起，看能不能把它认出来。认不出来，统计量再好看也不可信。',
+  does: [
+    '多重检验：试了 N 个没有优势的策略，最好那个的夏普比率大致按 √(2 ln N) 增长。Bailey 与 López de Prado 的通缩夏普比率按试验次数做修正。',
+    '样本外检验：留出从未看过的数据。滚动前推：用过去一段数据优化，在下一段检验，滚动重复。',
+    '对照组检验：打乱信号与收益的对应关系，或把价格序列随机平移，生成“没有优势”的对照组，看真实结果是否落在对照组的分布之外。',
+    '常见错误：未来函数（用到了当时还不知道的数据，例如用收盘价决定当天开盘的下单）；幸存者偏差（只用今天还存在的品种）；成交假设过于乐观（价格一触及挂单价就算成交，实际需要排队）；成本低估。'
+  ],
+  flow: { lanes: ['想法', '回测', '样本外', '模拟盘', '实盘'], steps: [
+    [0, 1, '假设：盘口不平衡能预测下一跳'],
+    [1, 1, '在 2025 年数据上调参'],
+    [1, 1, '记录总共试了多少组参数'],
+    [1, 2, '在 2026 年数据上检验，参数不再改动'],
+    [2, 2, '与打乱数据的对照组比较'],
+    [2, 3, '模拟盘运行 4 周，比较成交率与回测'],
+    [3, 4, '小资金实盘'],
+    [4, 1, '用实盘结果校准回测的成本模型']
+  ]},
+  tick: '高频回测最大的偏差来自成交假设。挂单能否成交取决于排队位置，用快照数据回测时，通常要假设“价格穿过挂单价才算成交”，或用队列模型估计。延迟也必须模拟：信号产生后，经过实际的延迟再下单。',
+  stats: ['通缩夏普比率。', '样本内与样本外夏普之比。', '经验 p 值：对照组里达到同样结果的比例。', '参数邻域内结果是否稳定。'],
+  params: [['试验次数', '每一次尝试都计入 N，包括放弃的想法。'], ['样本外比例', '留出多少数据只在最后用一次。'], ['成交与成本模型', '挂单成交规则、手续费、滑点、延迟。']],
+  money: '本身不产生收益，避免把运气当成能力投入资金。',
+  fail: '样本外数据被反复查看后也变成了样本内；市场结构变化让历史规律失效；同一份数据被用来做太多次检验。',
+  terms: [['过拟合', '模型拟合了数据中的噪声，而不是规律。'], ['未来函数', '回测中使用了当时无法获得的信息。'], ['样本外', '建模时没有使用过的数据。'], ['经验 p 值', '对照组中结果不差于真实结果的比例。']],
+  related: ['sizing', 'xsec', 'obi'], ma: [],
+  refs: ['Bailey, López de Prado (2014). The Deflated Sharpe Ratio. Journal of Portfolio Management.', 'Bailey, Borwein, López de Prado, Zhu (2014). Pseudo-Mathematics and Financial Charlatanism. Notices of the AMS.', 'Harvey, Liu, Zhu (2016). … and the Cross-Section of Expected Returns. Review of Financial Studies.'],
+  widgets: [['试了 N 个没有优势的策略，最好的一个长什么样', 'overfit'], ['认出有真实优势的那一条', 'lineup']] }
+];
+
+const byId = Object.fromEntries(E.map(e => [e.id, e]));
+const groupName = Object.fromEntries(GROUPS.map(g => [g[0], g[1]]));
+const fmt = (n, d = 0) => Number(n).toLocaleString('zh-CN', { minimumFractionDigits: d, maximumFractionDigits: d });
+const sgn = (n, d = 0) => (n > 0 ? '+' : '') + fmt(n, d);
+const $ = s => document.querySelector(s);
+const MA = 'https://icelos2027.github.io/market-atlas/';
+
+/* ---------- 设置（记住在本机） ---------- */
+const PREF_KEY = 'quant-atlas-prefs';
+let prefs = { pal: 'oat', font: 'normal', theme: 'system' };
+try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch (e) {}
+function applyPrefs() {
+  document.documentElement.setAttribute('data-palette', prefs.pal);
+  document.documentElement.setAttribute('data-font', prefs.font);
+  if (prefs.theme === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', prefs.theme);
+  document.querySelectorAll('[data-theme-pick]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themePick === prefs.theme)));
+  document.querySelectorAll('[data-pal]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pal === prefs.pal)));
+  document.querySelectorAll('button[data-font]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.font === prefs.font)));
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {}
+}
+document.querySelectorAll('button[data-pal]').forEach(b => b.addEventListener('click', () => { prefs.pal = b.dataset.pal; applyPrefs(); }));
+document.querySelectorAll('button[data-font]').forEach(b => b.addEventListener('click', () => { prefs.font = b.dataset.font; applyPrefs(); }));
+document.querySelectorAll('button[data-theme-pick]').forEach(b => b.addEventListener('click', () => { prefs.theme = b.dataset.themePick; applyPrefs(); }));
+applyPrefs();
+
+/* ---------- 目录 ---------- */
+function buildIndex() {
+  let h = '<div><ul><li><a href="#overview" data-id="overview">总览：策略地图</a></li></ul></div>';
+  let opts = '<option value="overview">总览：策略地图</option>';
+  for (const [g, gname] of GROUPS) {
+    const items = E.filter(e => e.g === g);
+    h += `<div><h3>${gname}</h3><ul>${items.map(e => `<li><a href="#${e.id}" data-id="${e.id}">${e.name}</a></li>`).join('')}</ul></div>`;
+    opts += `<optgroup label="${gname}">${items.map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>`;
+  }
+  $('#index').innerHTML = h;
+  $('#picker').innerHTML = opts;
+  $('#picker').addEventListener('change', ev => { location.hash = ev.target.value; });
+}
+
+/* ---------- 泳道图（一个交易周期） ---------- */
+function laneSvg(f) {
+  const n = f.lanes.length, LW = 158, PX = 40, HH = 48, SH = 46;
+  const W = PX + n * LW + 8, H = HH + 22 + f.steps.length * SH;
+  const cx = i => PX + LW * i + LW / 2;
+  let s = `<svg class="lane" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="交易步骤图：${f.lanes.join('、')}">`;
+  s += '<defs><marker id="ah-lane" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,1 L9,5 L0,9 z"/></marker></defs>';
+  f.steps.forEach((st, i) => { const y = HH + 26 + i * SH; s += `<line class="ln-row" x1="30" x2="${W - 4}" y1="${y + SH / 2}" y2="${y + SH / 2}"/>`; });
+  f.lanes.forEach((l, i) => {
+    s += `<line class="ln-l" x1="${cx(i)}" x2="${cx(i)}" y1="40" y2="${H - 6}"/>`;
+    s += `<rect class="ln-h" x="${cx(i) - 70}" y="6" width="140" height="34" rx="6"/><text x="${cx(i)}" y="28" text-anchor="middle">${l}</text>`;
+  });
+  f.steps.forEach((st, i) => {
+    const [a, b, label] = st; const y = HH + 26 + i * SH;
+    s += `<circle class="ln-nc" cx="16" cy="${y}" r="10"/><text class="ln-n" x="16" y="${y + 4}" text-anchor="middle">${i + 1}</text>`;
+    if (a === b) {
+      s += `<rect class="ln-s" x="${cx(a) - 6}" y="${y - 6}" width="12" height="12" rx="2"/>`;
+      const last = a === n - 1 && n > 1;
+      s += `<text class="halo" x="${last ? cx(a) - 14 : cx(a) + 14}" y="${y + 4.5}" text-anchor="${last ? 'end' : 'start'}">${label}</text>`;
+    } else {
+      const dir = b > a ? 1 : -1;
+      s += `<line class="ln-a" x1="${cx(a) + dir * 6}" x2="${cx(b) - dir * 8}" y1="${y}" y2="${y}" marker-end="url(#ah-lane)"/>`;
+      s += `<circle cx="${cx(a)}" cy="${y}" r="3" style="fill:var(--accent)"/>`;
+      s += `<text class="halo" x="${(cx(a) + cx(b)) / 2}" y="${y - 8}" text-anchor="middle">${label}</text>`;
+    }
+  });
+  return s + '</svg>';
+}
+
+/* ---------- 总览：策略地图 ---------- */
+function stratMap() {
+  const W = 760, L = 128, R = 742, T = 8, BH = 92, H = T + BH * 4 + 46;
+  const xs = v => L + (v + 1.5) / 8.7 * (R - L);
+  const bands = [['提供流动性', '收取价差'], ['定价约束', '价差有上限或会回归'], ['预测方向', '信息与订单流'], ['承担风险', '风险溢价']];
+  let s = '';
+  bands.forEach(([a, b], i) => { const y = T + i * BH; s += `<rect x="0" y="${y}" width="${W}" height="${BH}" style="fill:${i % 2 ? 'var(--surface)' : 'var(--bg)'}"/><text x="12" y="${y + BH / 2 - 3}" class="t-strong">${a}</text><text x="12" y="${y + BH / 2 + 15}" class="band-l">${b}</text>`; });
+  [[-1, '0.1 秒'], [0, '1 秒'], [1.78, '1 分钟'], [3.56, '1 小时'], [4.94, '1 天'], [5.78, '1 周'], [6.41, '1 月']].forEach(([v, t]) => {
+    s += `<line x1="${xs(v).toFixed(1)}" x2="${xs(v).toFixed(1)}" y1="${T}" y2="${T + 4 * BH}" style="stroke:var(--border);stroke-dasharray:2 4"/><text x="${xs(v).toFixed(1)}" y="${T + 4 * BH + 18}" text-anchor="middle" class="band-l">${t}</text>`;
+  });
+  s += `<text x="${(L + R) / 2}" y="${H - 6}" text-anchor="middle" class="band-l">典型持仓周期（对数刻度）</text>`;
+  E.filter(e => e.pos).forEach(e => {
+    const [xv, b, yf, side] = e.pos, x = xs(xv), y = T + b * BH + yf * BH, l = side === 'l';
+    s += `<a href="#${e.id}" aria-label="${e.name}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5.5" style="fill:var(--accent)"/><text x="${(l ? x - 10 : x + 10).toFixed(1)}" y="${(y + 4.5).toFixed(1)}" text-anchor="${l ? 'end' : 'start'}">${e.short}</text></a>`;
+  });
+  return `<div class="smap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="策略地图：横轴为典型持仓周期，纵轴为收益来源">${s}</svg></div>`;
+}
+
+function overview() {
+  const groups = GROUPS.map(([g, name, what]) => `<div class="grp"><h3>${name} <span class="tag">${what}</span></h3><div class="cards">${E.filter(e => e.g === g).map(e => `<a class="card" href="#${e.id}"><span>${e.name}</span><small>${e.hold} · 形状：${e.phys}</small></a>`).join('')}</div></div>`).join('');
+  return `<div class="head"><p class="crumb">总览</p><h1>每种策略赚的是什么钱，长什么样</h1>
+    <p class="lead">20 类常见量化策略。每一页先给形状和对应的物理量，再给一个交易周期的流程、秒级和分钟级的对应现象、需要检验的统计量。每页都有一个可以操作的模拟示意。</p></div>
+  <section><h2>策略地图 <span class="tag">横向是持仓周期，纵向是收益来源；点击名称查看，窄屏上可以左右滑动</span></h2>${stratMap()}
+    <p class="note">“研究与执行”一组（执行、仓位、回测）适用于所有策略，没有放在图上。位置是典型情况，同一种策略有不同时间尺度的版本。</p></section>
+  <section><h2>全部策略</h2><div class="groups">${groups}</div></section>
+  <section><h2>读每一页时问三个问题</h2><div class="axes">
+    <div><h3>赚谁的钱</h3><p>提供流动性的策略从急于成交的人那里收价差；定价约束类策略赚被成本或规则绑定的两个价格之间的差；预测类策略赚比别人更早知道方向；承担风险的策略收取别人为转移风险支付的溢价。</p></div>
+    <div><h3>在什么时间尺度上</h3><p>同一个想法在不同时间尺度上有不同版本。例如配对交易的秒级版本接近领先滞后套利，趋势跟踪的秒级版本接近订单流延续。</p></div>
+    <div><h3>形状对不对</h3><p>先看盈亏或信号的形状是否符合这类策略应有的样子，再看统计量。形状不对而统计量好看时，先怀疑回测。</p></div>
+  </div></section>
+  <p class="note">本图鉴用于理解策略结构，不构成投资建议。交互图中的数据全部是模拟生成的，参数和结果只用于展示形状。涉及交易所规则的地方以交易所当前文件为准。姊妹站点：<a href="${MA}" target="_blank" rel="noopener">市场参与者图鉴</a>。</p>`;
+}
+
+function entry(e) {
+  const idx = E.indexOf(e), prev = E[idx - 1], next = E[idx + 1];
+  let h = `<div class="head"><p class="crumb">${groupName[e.g]}</p><h1>${e.name}</h1><p class="en">${e.en}</p>
+    <p class="lead">${e.one}</p>
+    <div class="chips"><span class="chip">持仓周期：<b>${e.hold}</b></span><span class="chip">收益来源：<b>${e.src}</b></span><span class="chip">市场：<b>${e.mk}</b></span></div></div>`;
+  h += `<section><h2>形状与物理对应 <span class="tag">${e.phys}</span></h2><p class="shape">${e.shape}</p></section>`;
+  (e.widgets || []).forEach(([title, fn]) => { h += `<section><h2>${title} <span class="tag">模拟数据</span></h2><div class="panel" id="w-${fn}"></div></section>`; });
+  h += `<section><h2>具体怎么做</h2><div class="prose">${e.does.map(p => `<p>${p}</p>`).join('')}</div></section>`;
+  h += `<section><h2>一个交易周期 <span class="tag">${e.flow.steps.length} 步 · 横向为参与方，纵向为先后顺序</span></h2>
+    <div class="diagram">${laneSvg(e.flow)}</div>
+    <ol class="steps">${e.flow.steps.map(s => `<li>${s[2]}${s[3] ? `<span class="sn">：${s[3]}</span>` : ''}</li>`).join('')}</ol></section>`;
+  h += `<section><h2>放到秒级和分钟级</h2><div class="prose"><p>${e.tick}</p></div></section>`;
+  h += `<section><h2>再看统计量</h2><ul class="rules">${e.stats.map(t => `<li>${t}</li>`).join('')}</ul></section>`;
+  h += `<section><h2>关键参数</h2><dl class="terms">${e.params.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl></section>`;
+  h += `<section><h2>收益与风险</h2><dl class="two"><div><dt>赚谁的钱</dt><dd>${e.money}</dd></div><div><dt>什么时候失效</dt><dd>${e.fail}</dd></div></dl></section>`;
+  h += `<section><h2>术语</h2><dl class="terms">${e.terms.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl></section>`;
+  h += `<section><h2>相关</h2><div class="links">${e.related.map(r => `<a href="#${r}">${byId[r].name}</a>`).join('')}</div>`;
+  if (e.ma && e.ma.length) h += `<p class="note">在市场参与者图鉴中：${e.ma.map(([id, t]) => `<a href="${MA}#${id}" target="_blank" rel="noopener">${t}</a>`).join('、')}</p>`;
+  h += '</section>';
+  if (e.refs && e.refs.length) h += `<div class="refs"><span>参考文献</span>${e.refs.map(r => `<span>${r}</span>`).join('')}</div>`;
+  h += `<nav class="pager" aria-label="上一个和下一个">${prev ? `<a href="#${prev.id}">上一个：${prev.name}</a>` : '<a href="#overview">返回总览</a>'}${next ? `<a href="#${next.id}">下一个：${next.name}</a>` : '<a href="#overview">返回总览</a>'}</nav>`;
+  return h;
+}
+
+function route(scroll) {
+  const id = (location.hash || '#overview').slice(1);
+  const e = byId[id];
+  $('#content').innerHTML = e ? entry(e) : overview();
+  const cur = e ? id : 'overview';
+  document.querySelectorAll('#index a').forEach(a => { if (a.dataset.id === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  $('#picker').value = cur;
+  if (e) (e.widgets || []).forEach(([, fn]) => { const el = $('#w-' + fn); try { W[fn](el); } catch (err) { el.innerHTML = `<p class="msg">这个示意没有显示出来：脚本出错（${err.message}）。其余内容不受影响，刷新页面可以重试。</p>`; } });
+  if (scroll) window.scrollTo(0, 0);
+}
+
+/* ================= 绘图工具 ================= */
+const col = c => `var(--${c})`;
+/* 图表按内容区实际宽度绘制，手机上文字保持原始大小 */
+const CW = () => Math.max(320, Math.min(640, ((document.querySelector('#content') || {}).clientWidth || 672) - 34));
+const rngOf = seed => { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+const gaussOf = rnd => () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+const sd = a => { const m = mean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / Math.max(1, a.length - 1)); };
+const skew = a => { const m = mean(a), s = sd(a) || 1; return a.reduce((t, v) => t + ((v - m) / s) ** 3, 0) / a.length; };
+const maxDD = eq => { let pk = -Infinity, dd = 0; eq.forEach(v => { pk = Math.max(pk, v); dd = Math.max(dd, pk - v); }); return dd; };
+const sma = (a, n) => { const out = Array(a.length).fill(null); let s = 0; a.forEach((v, i) => { s += v; if (i >= n) s -= a[i - n]; if (i >= n - 1) out[i] = s / n; }); return out; };
+function runs(pos, pc = 'accent-soft', nc = 'other-soft') { const out = []; const n = pos.length; let i = 0; while (i < n) { let j = i; while (j + 1 < n && pos[j + 1] === pos[i]) j++; if (pos[i]) out.push([i, Math.min(j + 1, n - 1), pos[i] > 0 ? pc : nc]); i = j + 1; } return out; }
+function decOf(st) { const s = String(+st.toPrecision(6)); return s.includes('.') ? s.split('.')[1].length : 0; }
+function ticks(lo, hi, n = 4) {
+  const raw = (hi - lo) / n, mag = 10 ** Math.floor(Math.log10(raw));
+  const st = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw * 0.999);
+  const out = []; for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + 1e-9; v += st) out.push(+v.toFixed(10));
+  return { out, d: decOf(st) };
+}
+function spreadLabels(labs, gap) { labs.sort((a, b) => a.y - b.y); for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < gap) labs[i].y = labs[i - 1].y + gap; return labs; }
+
+/* 时间序列：多个面板共用横轴 */
+function plot(o) {
+  const Wd = o.w || CW(), L = o.l ?? 52, R = o.r ?? 84, n = o.n;
+  const x = i => L + i / Math.max(1, n - 1) * (Wd - L - R);
+  let y0 = 6, s = '';
+  for (const p of o.panels) {
+    if (p.title) { y0 += 18; s += `<text x="${L}" y="${y0 - 6}" class="t-strong">${p.title}</text>`; }
+    const vals = [];
+    (p.series || []).forEach(se => se.d.forEach(v => { if (v != null && isFinite(v)) vals.push(v); }));
+    (p.hl || []).forEach(h => vals.push(h.v));
+    if (p.bars) p.bars.d.forEach(v => vals.push(v, 0));
+    (p.dots || []).forEach(d => vals.push(d.v));
+    let lo = p.lo ?? Math.min(...vals), hi = p.hi ?? Math.max(...vals);
+    if (!(hi > lo)) { lo -= 1; hi += 1; }
+    const pad = (hi - lo) * 0.06; if (p.lo == null) lo -= pad; if (p.hi == null) hi += pad;
+    const h = p.h || 170, y = v => y0 + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * h;
+    (p.shade || []).forEach(([a, b, c]) => { s += `<rect x="${x(a).toFixed(1)}" y="${y0}" width="${Math.max(0.6, x(b) - x(a)).toFixed(1)}" height="${h}" style="fill:${col(c)}"/>`; });
+    const tk = ticks(lo, hi, p.nt || 4);
+    tk.out.forEach(v => { s += `<line class="grid" x1="${L}" x2="${Wd - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" class="num">${p.fmt ? p.fmt(v) : fmt(v, tk.d)}</text>`; });
+    const labs = [];
+    (p.hl || []).forEach(hh => { s += `<line x1="${L}" x2="${Wd - R}" y1="${y(hh.v).toFixed(1)}" y2="${y(hh.v).toFixed(1)}" style="stroke:${col(hh.c || 'muted')};stroke-width:${hh.w || 1}${hh.dash ? ';stroke-dasharray:5 4' : ''}"/>`; if (hh.label) labs.push({ y: y(hh.v) + 4, t: hh.label, c: hh.c || 'muted' }); });
+    if (p.bars) {
+      const b = p.bars, bw = (Wd - L - R) / n;
+      if (b.merge) { let i = 0; while (i < n) { let j = i; while (j + 1 < n && b.d[j + 1] === b.d[i]) j++; const v = b.d[i]; if (v) { const yy = Math.min(y(0), y(v)); s += `<rect x="${x(i).toFixed(1)}" y="${yy.toFixed(1)}" width="${Math.max(0.8, x(Math.min(j + 1, n - 1)) - x(i)).toFixed(1)}" height="${Math.max(0.8, Math.abs(y(v) - y(0))).toFixed(1)}" style="fill:${col(v > 0 ? (b.pos || 'accent') : (b.neg || 'other'))}"/>`; } i = j + 1; } }
+      else b.d.forEach((v, i) => { if (!v) return; const yy = Math.min(y(0), y(v)); s += `<rect x="${(L + i * bw + bw * 0.12).toFixed(1)}" y="${yy.toFixed(1)}" width="${Math.max(0.8, bw * 0.76).toFixed(1)}" height="${Math.max(0.8, Math.abs(y(v) - y(0))).toFixed(1)}" style="fill:${col(v > 0 ? (b.pos || 'accent') : (b.neg || 'other'))}"/>`; });
+    }
+    (p.series || []).forEach(se => {
+      let d = '', pen = false;
+      se.d.forEach((v, i) => { if (v == null || !isFinite(v)) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
+      s += `<path d="${d}" style="fill:none;stroke:${col(se.c || 'muted')};stroke-width:${se.w || 1.5}${se.dash ? ';stroke-dasharray:5 4' : ''}${se.op ? ';opacity:' + se.op : ''}"/>`;
+      if (se.label) { let k = se.d.length - 1; while (k > 0 && (se.d[k] == null || !isFinite(se.d[k]))) k--; labs.push({ y: y(se.d[k]) + 4, t: se.label, c: se.lc || (se.c === 'muted' ? 'muted' : 'text') }); }
+    });
+    (p.dots || []).forEach(dt => { s += `<circle cx="${x(dt.i).toFixed(1)}" cy="${y(dt.v).toFixed(1)}" r="${dt.r || 3.2}" style="fill:${col(dt.c || 'accent-strong')};stroke:var(--surface);stroke-width:1"/>`; });
+    spreadLabels(labs, 14).forEach(l => { s += `<text x="${Wd - R + 6}" y="${l.y.toFixed(1)}" style="fill:${col(l.c)}">${l.t}</text>`; });
+    y0 += h + (p.gap ?? 14);
+  }
+  (o.xl || []).forEach(([i, t, a]) => { s += `<text x="${x(i).toFixed(1)}" y="${y0 + 6}" text-anchor="${a || 'middle'}" class="num">${t}</text>`; });
+  const H = y0 + (o.xl ? 12 : 0);
+  return `<svg class="chart" viewBox="0 0 ${Wd} ${H.toFixed(0)}" role="img" aria-label="${o.aria || ''}">${s}</svg>`;
+}
+
+/* 数值横轴：散点、曲线、柱 */
+function xy(o) {
+  const Wd = o.w || 420, H = o.h || 260, L = o.l ?? 52, R = o.r ?? 18, T = o.ylab ? 26 : 12, B = o.xlab ? 46 : 28;
+  const ax = [], ay = [];
+  (o.pts || []).forEach(p => { ax.push(p[0]); ay.push(p[1]); });
+  (o.curves || []).forEach(c => c.pts.forEach(p => { ax.push(p[0]); ay.push(p[1]); }));
+  (o.rects || []).forEach(r => { ax.push(r[0], r[1]); ay.push(r[2], r[3]); });
+  const xlo = o.xlo ?? Math.min(...ax), xhi = o.xhi ?? Math.max(...ax);
+  let ylo = o.ylo ?? Math.min(...ay), yhi = o.yhi ?? Math.max(...ay);
+  if (!(yhi > ylo)) { ylo -= 1; yhi += 1; }
+  if (o.ylo == null) ylo -= (yhi - ylo) * 0.05; if (o.yhi == null) yhi += (yhi - ylo) * 0.06;
+  const cx = v => Math.max(L, Math.min(Wd - R, L + (v - xlo) / (xhi - xlo) * (Wd - L - R)));
+  const cy = v => Math.max(T, Math.min(H - B, T + (yhi - v) / (yhi - ylo) * (H - T - B)));
+  let s = '';
+  (o.polys || []).forEach(pg => { s += `<path d="${pg.pts.map((p, i) => `${i ? 'L' : 'M'}${cx(p[0]).toFixed(1)},${cy(p[1]).toFixed(1)}`).join('')}Z" style="fill:${col(pg.c || 'accent-soft')}"/>`; });
+  const ty = ticks(ylo, yhi, o.ny || 4);
+  ty.out.forEach(v => { s += `<line class="grid" x1="${L}" x2="${Wd - R}" y1="${cy(v).toFixed(1)}" y2="${cy(v).toFixed(1)}"/><text x="${L - 6}" y="${(cy(v) + 4).toFixed(1)}" text-anchor="end" class="num">${o.fy ? o.fy(v) : fmt(v, ty.d)}</text>`; });
+  const xt = o.xt || ticks(xlo, xhi, o.nx || 5).out.map(v => [v, o.fx ? o.fx(v) : fmt(v, decOf(v))]);
+  xt.forEach(([v, t]) => { s += `<text x="${cx(v).toFixed(1)}" y="${H - B + 16}" text-anchor="middle" class="num">${t}</text>`; });
+  s += `<line class="axis" x1="${L}" x2="${Wd - R}" y1="${H - B}" y2="${H - B}"/>`;
+  (o.rects || []).forEach(([x0, x1, y0, y1, c]) => { const a = cy(Math.max(y0, y1)), b = cy(Math.min(y0, y1)); s += `<rect x="${cx(x0).toFixed(1)}" y="${(b - a < 2 && y1 !== y0 ? b - 2 : a).toFixed(1)}" width="${Math.max(1, cx(x1) - cx(x0)).toFixed(1)}" height="${Math.max(y1 !== y0 ? 2 : 0, b - a).toFixed(1)}" style="fill:${col(c || 'accent')}"/>`; });
+  (o.hl || []).forEach(h => { s += `<line x1="${L}" x2="${Wd - R}" y1="${cy(h.v).toFixed(1)}" y2="${cy(h.v).toFixed(1)}" style="stroke:${col(h.c || 'muted')};stroke-width:1${h.dash ? ';stroke-dasharray:5 4' : ''}"/>`; if (h.label) s += `<text x="${Wd - R - 4}" y="${(cy(h.v) - 5).toFixed(1)}" text-anchor="end" style="fill:${col(h.c || 'muted')}">${h.label}</text>`; });
+  (o.vl || []).forEach(v => { s += `<line x1="${cx(v.v).toFixed(1)}" x2="${cx(v.v).toFixed(1)}" y1="${T}" y2="${H - B}" style="stroke:${col(v.c || 'muted')};stroke-width:${v.w || 1}${v.dash ? ';stroke-dasharray:5 4' : ''}"/>`; if (v.label) s += `<text x="${(cx(v.v) + (v.a === 'end' ? -5 : 5)).toFixed(1)}" y="${T + 12 + (v.dy || 0)}" text-anchor="${v.a || 'start'}" style="fill:${col(v.c || 'muted')}">${v.label}</text>`; });
+  (o.pts || []).forEach(p => { s += `<circle cx="${cx(p[0]).toFixed(1)}" cy="${cy(p[1]).toFixed(1)}" r="2.2" style="fill:${col(o.pc || 'muted')};opacity:0.5"/>`; });
+  (o.curves || []).forEach(c => {
+    s += `<path d="${c.pts.map((p, i) => `${i ? 'L' : 'M'}${cx(p[0]).toFixed(1)},${cy(p[1]).toFixed(1)}`).join('')}" style="fill:none;stroke:${col(c.c || 'accent')};stroke-width:${c.w || 2}${c.dash ? ';stroke-dasharray:5 4' : ''}"/>`;
+    if (c.label) { const [lx, ly, la] = c.lp || [c.pts[c.pts.length - 1][0], c.pts[c.pts.length - 1][1], 'end']; s += `<text class="halo" x="${(cx(lx) + (la === 'start' ? 6 : la === 'end' ? -6 : 0)).toFixed(1)}" y="${(cy(ly) - 7).toFixed(1)}" text-anchor="${la}" style="fill:${col(c.lc || 'text')}">${c.label}</text>`; }
+  });
+  (o.marks || []).forEach(m => { s += `<circle cx="${cx(m.x).toFixed(1)}" cy="${cy(m.y).toFixed(1)}" r="${m.r || 4.5}" style="fill:${col(m.c || 'accent-strong')};stroke:var(--surface);stroke-width:1.5"/>`; if (m.label) s += `<text class="halo" x="${(cx(m.x) + (m.a === 'end' ? -8 : 8)).toFixed(1)}" y="${(cy(m.y) + (m.dy ?? -8)).toFixed(1)}" text-anchor="${m.a || 'start'}" style="fill:${col(m.lc || 'text')}">${m.label}</text>`; });
+  if (o.xlab) s += `<text x="${((L + Wd - R) / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${o.xlab}</text>`;
+  if (o.ylab) s += `<text x="${L - 6}" y="14" text-anchor="start">${o.ylab}</text>`;
+  return `<svg class="chart" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="${o.aria || ''}">${s}</svg>`;
+}
+
+/* 横向条形（有正负） */
+function hbars(items, o = {}) {
+  const Wd = o.w || CW(), L = o.l ?? 120, R = o.r ?? 70, rh = o.rh || 28, H = items.length * rh + 6;
+  const m = Math.max(...items.map(d => Math.abs(d.v))) || 1, mid = L + (Wd - L - R) / 2, half = (Wd - L - R) / 2 - 44;
+  let s = `<line class="axis" x1="${mid}" x2="${mid}" y1="2" y2="${H - 2}"/>`;
+  items.forEach((d, i) => {
+    const y = 3 + i * rh, w = Math.abs(d.v) / m * half, x0 = d.v >= 0 ? mid : mid - w;
+    s += `<text x="8" y="${y + rh / 2 + 4}" class="t-strong">${d.label}</text><rect x="${x0.toFixed(1)}" y="${y + 6}" width="${Math.max(1, w).toFixed(1)}" height="${rh - 12}" rx="2" style="fill:${col(d.c || 'accent')}"/>`;
+    s += `<text x="${(d.v >= 0 ? mid + w + 6 : mid - w - 6).toFixed(1)}" y="${y + rh / 2 + 4}" text-anchor="${d.v >= 0 ? 'start' : 'end'}" class="num">${o.f ? o.f(d.v) : fmt(d.v, 1)}</text>`;
+    if (d.tag) s += `<text x="${Wd - 8}" y="${y + rh / 2 + 4}" text-anchor="end" style="fill:${col(d.tc || 'muted')}">${d.tag}</text>`;
+  });
+  return `<svg class="chart" viewBox="0 0 ${Wd} ${H}" role="img" aria-label="${o.aria || ''}">${s}</svg>`;
+}
+
+function histRects(vals, lo, hi, nb, cfn) {
+  const w = (hi - lo) / nb, cnt = Array(nb).fill(0);
+  vals.forEach(v => { const k = Math.max(0, Math.min(nb - 1, Math.floor((v - lo) / w))); cnt[k]++; });
+  return cnt.map((c, k) => [lo + k * w + w * 0.08, lo + (k + 1) * w - w * 0.08, 0, c, cfn ? cfn(lo + (k + 0.5) * w) : 'accent']);
+}
+
+/* 控件 */
+function ctl(el, defs, v) {
+  return `<div class="ctrl">${defs.map(([k, lab, mn, mx, st]) => `<label for="${el.id}-${k}">${lab}</label><input type="range" id="${el.id}-${k}" min="${mn}" max="${mx}" step="${st}" value="${v[k]}"><output id="${el.id}-${k}-o" for="${el.id}-${k}"></output>`).join('')}</div>`;
+}
+function bindCtl(el, defs, v, upd) {
+  const show = () => defs.forEach(([k, , , , , f]) => { el.querySelector(`#${el.id}-${k}-o`).textContent = f ? f(v[k]) : v[k]; });
+  defs.forEach(([k]) => el.querySelector(`#${el.id}-${k}`).addEventListener('input', ev => { v[k] = +ev.target.value; show(); upd(); }));
+  show();
+}
+function segs(el, k, lab, opts, v) {
+  return `<div class="pref"><span id="${el.id}-${k}-l">${lab}</span><div class="seg" role="group" aria-labelledby="${el.id}-${k}-l">${opts.map(([val, t]) => `<button type="button" data-k="${k}" data-v="${val}" aria-pressed="${String(v[k] === val)}">${t}</button>`).join('')}</div></div>`;
+}
+function bindSeg(el, v, upd) {
+  el.querySelectorAll('button[data-k]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.k, raw = b.dataset.v; v[k] = raw !== '' && !isNaN(+raw) ? +raw : raw;
+    el.querySelectorAll(`button[data-k="${k}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    upd();
+  }));
+}
+
+/* ================= 交互示意（全部为模拟数据） ================= */
+const W = {};
+
+/* 时间序列动量 */
+W.tsmom = el => {
+  const v = { rule: 'ma', fast: 20, slow: 60, brk: 40, cost: 0.2, seed: 1 };
+  const defs = [['fast', '均线：快线（日）', 5, 40, 1], ['slow', '均线：慢线（日）', 30, 150, 5], ['brk', '突破：通道长度（日）', 10, 100, 5], ['cost', '每次换仓成本（点）', 0, 1, 0.05, x => x.toFixed(2)]];
+  el.innerHTML = `<div class="bar">${segs(el, 'rule', '规则', [['ma', '均线交叉'], ['brk', '通道突破']], v)}<button type="button" class="btn quiet" data-act="seed">换一条价格路径</button></div>
+    ${ctl(el, defs, v)}<div class="cv"></div><div class="cv2"></div><p class="msg"></p>
+    <p class="note">价格分五段：上涨、横盘、下跌、横盘、上涨。浅色底表示持多，灰蓝底表示持空。</p>`;
+  const price = () => { const g = gaussOf(rngOf(v.seed * 7919)); const P = [100]; const reg = [[110, 0.22], [250, 0], [350, -0.25], [420, 0], [500, 0.2]]; for (let i = 1; i < 500; i++) P.push(P[i - 1] + reg.find(r => i < r[0])[1] + g()); return P; };
+  function upd() {
+    el.querySelector(`#${el.id}-fast`).disabled = el.querySelector(`#${el.id}-slow`).disabled = v.rule !== 'ma';
+    el.querySelector(`#${el.id}-brk`).disabled = v.rule !== 'brk';
+    const P = price(), n = P.length, pos = Array(n).fill(0); let lines;
+    if (v.rule === 'ma') {
+      const sl = Math.max(v.slow, v.fast + 5), f = sma(P, v.fast), s = sma(P, sl);
+      for (let i = sl - 1; i < n; i++) pos[i] = f[i] > s[i] ? 1 : -1;
+      lines = [{ d: s, c: 'other', w: 2, label: '慢线' }, { d: f, c: 'accent', w: 2, label: '快线' }];
+    } else {
+      const N = v.brk, up = Array(n).fill(null), dn = Array(n).fill(null); let cur = 0;
+      for (let i = N; i < n; i++) { let hi = -Infinity, lo = Infinity; for (let k = i - N; k < i; k++) { hi = Math.max(hi, P[k]); lo = Math.min(lo, P[k]); } up[i] = hi; dn[i] = lo; if (P[i] > hi) cur = 1; else if (P[i] < lo) cur = -1; pos[i] = cur; }
+      lines = [{ d: up, c: 'accent', w: 1.5, dash: 1, label: `${N} 日最高` }, { d: dn, c: 'other', w: 1.5, dash: 1, label: `${N} 日最低` }];
+    }
+    const eq = [0], trades = []; let ent = null;
+    for (let i = 1; i < n; i++) {
+      eq.push(eq[i - 1] + pos[i - 1] * (P[i] - P[i - 1]) - v.cost * Math.abs(pos[i] - pos[i - 1]));
+      if (pos[i] !== pos[i - 1]) { if (ent != null && pos[i - 1]) trades.push(pos[i - 1] * (P[i] - P[ent]) - 2 * v.cost); ent = pos[i] ? i : null; }
+    }
+    if (ent != null) trades.push(pos[n - 1] * (P[n - 1] - P[ent]) - 2 * v.cost);
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '价格、信号线与策略累计盈亏', panels: [
+      { h: 200, title: '价格与信号线', shade: runs(pos), series: [{ d: P, c: 'muted', w: 1 }, ...lines] },
+      { h: 110, title: '策略累计盈亏（点）', series: [{ d: eq, c: 'accent-strong', w: 2, label: sgn(eq[n - 1], 0) }], hl: [{ v: 0 }] }],
+      xl: [[0, '第 1 天', 'start'], [n - 1, `第 ${n} 天`, 'end']] });
+    const sorted = trades.slice().sort((a, b) => a - b);
+    el.querySelector('.cv2').innerHTML = sorted.length ? plot({ n: sorted.length, aria: '每笔交易盈亏，从小到大', panels: [{ h: 110, title: '每笔交易盈亏，从小到大排列', bars: { d: sorted }, hl: [{ v: 0 }] }] }) : '';
+    const wins = trades.filter(t => t > 0), loss = trades.filter(t => t <= 0);
+    const aw = wins.length ? mean(wins) : 0, al = loss.length ? -mean(loss) : 0;
+    el.querySelector('.msg').textContent = `共 ${trades.length} 笔交易，盈利 ${wins.length} 笔（胜率 ${fmt(wins.length / Math.max(1, trades.length) * 100)}%）。平均盈利 ${fmt(aw, 1)} 点，平均亏损 ${fmt(al, 1)} 点，盈亏比 ${al ? fmt(aw / al, 2) : '—'}。单笔盈亏偏度 ${trades.length > 2 ? fmt(skew(trades), 2) : '—'}。累计 ${sgn(eq[n - 1], 1)} 点，最大回撤 ${fmt(maxDD(eq), 1)} 点。`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 截面排序 */
+W.xsec = el => {
+  const v = { fac: 'mix', ic: 0.05, seed: 3 };
+  const names = ['螺纹钢', '铁矿石', '焦煤', '沪铜', '沪铝', '豆粕', '棕榈油', '原油'];
+  const mom = [-6.2, 4.1, -11.5, 7.8, 2.3, -3.4, 9.6, 1.2], carry = [3.1, 12.4, -8.6, 1.5, 4.8, -5.2, 6.9, -2.3];
+  const z = a => { const m = mean(a), s = sd(a); return a.map(x => (x - m) / s); };
+  const defs = [['ic', '因子强度 IC', 0, 0.15, 0.01, x => x.toFixed(2)]];
+  el.innerHTML = `<div class="bar">${segs(el, 'fac', '排序指标', [['mom', '60 日动量'], ['carry', '年化展期收益'], ['mix', '两者合成']], v)}</div>
+    <div class="cv"></div>
+    <p class="note">某个调仓日 8 个品种的虚构数值。展期收益为正表示近月高于远月（反向市场）。合成分数是两个指标各自标准化后的平均。</p>
+    <h3 class="sub">分组的形状：因子强度变化时，五组收益是否像台阶一样单调</h3>
+    ${ctl(el, defs, v)}<div class="bar"><button type="button" class="btn quiet" data-act="seed">重新抽样</button><span class="status">40 个品种 × 250 期，单期收益波动按 100 个基点换算</span></div>
+    <div class="grid2"><div class="cv2"></div><div class="cv3"></div></div><p class="msg"></p>`;
+  function upd() {
+    const zm = z(mom), zc = z(carry);
+    const val = v.fac === 'mom' ? mom : v.fac === 'carry' ? carry : zm.map((x, i) => (x + zc[i]) / 2);
+    const items = names.map((nm, i) => ({ label: nm, v: val[i] })).sort((a, b) => b.v - a.v);
+    items.forEach((d, i) => { if (i < 2) Object.assign(d, { c: 'accent', tag: '做多', tc: 'accent-strong' }); else if (i >= items.length - 2) Object.assign(d, { c: 'other', tag: '做空', tc: 'other' }); else Object.assign(d, { c: 'muted', tag: '不持有' }); });
+    el.querySelector('.cv').innerHTML = hbars(items, { f: v.fac === 'mix' ? x => fmt(x, 2) : x => sgn(x, 1) + '%', aria: '品种排序' });
+    const g = gaussOf(rngOf(v.seed * 104729)), A = 40, T = 250, ic = v.ic, q = [0, 0, 0, 0, 0], ls = [0];
+    for (let t = 0; t < T; t++) {
+      const f = [], r = [];
+      for (let a = 0; a < A; a++) { const fv = g(); f.push(fv); r.push(ic * fv + Math.sqrt(1 - ic * ic) * g()); }
+      const idx = f.map((_, i) => i).sort((i, j) => f[i] - f[j]), gm = [0, 0, 0, 0, 0];
+      idx.forEach((ai, k) => { gm[Math.floor(k / (A / 5))] += r[ai] / (A / 5); });
+      gm.forEach((x, k) => { q[k] += x / T * 100; });
+      ls.push(ls[t] + (gm[4] - gm[0]) * 100);
+    }
+    const mono = q.every((x, k) => k === 0 || x > q[k - 1]);
+    const lo = Math.min(0, ...q), hi = Math.max(0, ...q);
+    el.querySelector('.cv2').innerHTML = xy({ w: 400, h: 240, aria: '五组平均收益', xlo: -0.6, xhi: 4.6, ylo: Math.min(lo, -2), yhi: Math.max(hi, 2), xt: [0, 1, 2, 3, 4].map(k => [k, `第 ${k + 1} 组`]), rects: q.map((x, k) => [k - 0.32, k + 0.32, 0, x, x >= 0 ? 'accent' : 'other']), hl: [{ v: 0 }], ylab: '下一期平均收益（基点）', xlab: '因子值从低到高' });
+    el.querySelector('.cv3').innerHTML = plot({ w: 400, r: 18, n: T + 1, aria: '多空组合累计收益', panels: [{ h: 168, title: '第 5 组 − 第 1 组，累计（基点）', series: [{ d: ls, c: 'accent-strong', w: 2 }], hl: [{ v: 0 }] }], xl: [[0, '第 1 期', 'start'], [T, `第 ${T} 期`, 'end']] });
+    el.querySelector('.msg').textContent = `IC = ${ic.toFixed(2)}：五组收益${mono ? '从低到高单调上升' : '不单调'}，第 5 组减第 1 组平均每期 ${sgn(q[4] - q[0], 1)} 个基点。经验关系：信息比率约等于 IC × √（每期独立下注的数量），同样的 IC，品种越多结果越稳定。把 IC 调到 0.02 以下再重新抽样几次，可以看到台阶经常被噪声打乱。`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 配对交易 */
+W.pairs = el => {
+  const v = { hl: 10, ent: 2, brk: 0, seed: 5 };
+  const defs = [['hl', '真实半衰期（天）', 2, 40, 1], ['ent', '入场阈值 |z|', 1, 3, 0.1, x => x.toFixed(1)]];
+  el.innerHTML = `<div class="bar">${segs(el, 'brk', '关系', [[0, '保持稳定'], [1, '第 300 天后断裂']], v)}<button type="button" class="btn quiet" data-act="seed">换一组路径</button></div>
+    ${ctl(el, defs, v)}<div class="cv"></div><p class="msg"></p>
+    <p class="note">B 是随机游走，A = B + 常数 + 价差，价差按设定的半衰期回归。z 值用过去 60 天的均值和标准差计算。z 超过 ±4 时止损，之后等 z 回到 ±1 以内才允许重新开仓。</p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 31337)), n = 500, th = Math.LN2 / v.hl, B = [100], S = [0];
+    for (let i = 1; i < n; i++) { B.push(B[i - 1] + g()); S.push(S[i - 1] * (1 - th) + g() * 0.5 + (v.brk && i > 300 ? 0.08 : 0)); }
+    const A = B.map((b, i) => b + 5 + S[i]), sp = A.map((a, i) => a - B[i]), W0 = 60, zz = Array(n).fill(null);
+    for (let i = W0; i < n; i++) { const w = sp.slice(i - W0, i); zz[i] = (sp[i] - mean(w)) / (sd(w) || 1); }
+    const pos = Array(n).fill(0); let cur = 0, cool = false, nt = 0, stops = 0, wins = 0, entS = 0;
+    for (let i = W0; i < n; i++) {
+      const zv = zz[i];
+      if (cur === 0) { if (cool && Math.abs(zv) < 1) cool = false; if (!cool) { if (zv > v.ent) { cur = -1; entS = sp[i]; nt++; } else if (zv < -v.ent) { cur = 1; entS = sp[i]; nt++; } } }
+      else if (Math.abs(zv) > 4) { cur = 0; stops++; cool = true; }
+      else if ((cur < 0 && zv <= 0) || (cur > 0 && zv >= 0)) { if ((sp[i] - entS) * cur > 0) wins++; cur = 0; }
+      pos[i] = cur;
+    }
+    const eq = [0]; for (let i = 1; i < n; i++) eq.push(eq[i - 1] + pos[i - 1] * (sp[i] - sp[i - 1]) - 0.05 * Math.abs(pos[i] - pos[i - 1]));
+    const x0 = sp.slice(0, -1), y0 = sp.slice(1).map((s, i) => s - sp[i]), mx = mean(x0), my = mean(y0);
+    let cxy = 0, cxx = 0; x0.forEach((xi, i) => { cxy += (xi - mx) * (y0[i] - my); cxx += (xi - mx) ** 2; });
+    const b = cxy / cxx, hlEst = b < 0 && b > -1 ? -Math.LN2 / Math.log(1 + b) : Infinity;
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '两个价格、z 值与累计盈亏', panels: [
+      { h: 150, title: '两个价格', series: [{ d: B, c: 'other', w: 1.4, label: 'B' }, { d: A, c: 'accent', w: 1.4, label: 'A' }] },
+      { h: 140, title: '价差的 z 值（浅色底：做多价差；灰蓝底：做空价差）', lo: -5, hi: 5, shade: runs(pos), series: [{ d: zz, c: 'text', w: 1.2 }], hl: [{ v: v.ent, c: 'accent-strong', dash: 1, label: '入场' }, { v: -v.ent, c: 'accent-strong', dash: 1, label: '入场' }, { v: 0 }, { v: 4, c: 'warn', dash: 1, label: '止损' }, { v: -4, c: 'warn', dash: 1, label: '止损' }] },
+      { h: 100, title: '累计盈亏（点）', series: [{ d: eq, c: 'accent-strong', w: 2, label: sgn(eq[n - 1], 1) }], hl: [{ v: 0 }] }],
+      xl: [[0, '第 1 天', 'start'], [n - 1, `第 ${n} 天`, 'end']] });
+    el.querySelector('.msg').textContent = `用全部数据回归估计的半衰期：${isFinite(hlEst) ? fmt(hlEst, 1) + ' 天' : '无法估计（价差不回归）'}，设定值 ${v.hl} 天。开仓 ${nt} 次，回到 0 平仓且盈利 ${wins} 次，止损 ${stops} 次。累计 ${sgn(eq[n - 1], 1)} 点，最大回撤 ${fmt(maxDD(eq), 1)} 点。${v.brk ? '第 300 天后价差开始单向漂移，估计的半衰期变长，策略持续在错误方向上开仓。' : ''}`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 日内均值回归 */
+W.vwaprev = el => {
+  const v = { day: 'range', k: 2, seed: 7 };
+  const defs = [['k', '带宽倍数 k', 1, 3.5, 0.1, x => x.toFixed(1)]];
+  el.innerHTML = `<div class="bar">${segs(el, 'day', '当天类型', [['range', '震荡日'], ['trend', '趋势日']], v)}<button type="button" class="btn quiet" data-act="seed">换一天</button></div>
+    ${ctl(el, defs, v)}<div class="cv"></div><p class="msg"></p>
+    <p class="note">一天 240 分钟，成交量开盘和收盘多、午间少。带宽 = VWAP ± k × 过去 30 分钟偏离的标准差。偏离到 2k 倍时止损，收盘强制平仓。</p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 9973 + (v.day === 'trend' ? 17 : 0))), n = 240, P = [100]; let anc = 100;
+    for (let i = 1; i < n; i++) { if (v.day === 'range') { anc += g() * 0.03; P.push(P[i - 1] + 0.15 * (anc - P[i - 1]) + 0.12 * g()); } else P.push(P[i - 1] + 0.012 + 0.1 * g()); }
+    let cv = 0, cvol = 0; const vw = [], up = Array(n).fill(null), dn = Array(n).fill(null), sdv = Array(n).fill(null);
+    P.forEach((p, i) => { const vol = (1 + 4 * (i / (n - 1) - 0.5) ** 2) * (1 + 0.3 * Math.abs(g())); cv += p * vol; cvol += vol; vw.push(cv / cvol); });
+    const dev = P.map((p, i) => p - vw[i]);
+    for (let i = 30; i < n; i++) { sdv[i] = sd(dev.slice(i - 30, i)) || 0.01; up[i] = vw[i] + v.k * sdv[i]; dn[i] = vw[i] - v.k * sdv[i]; }
+    const pos = Array(n).fill(0); let cur = 0, cool = false, nt = 0, stops = 0, wins = 0, eP = 0;
+    for (let i = 30; i < n - 1; i++) {
+      const d = dev[i] / sdv[i];
+      if (cur === 0) { if (cool && Math.abs(d) < 1) cool = false; if (!cool) { if (d > v.k) { cur = -1; nt++; eP = P[i]; } else if (d < -v.k) { cur = 1; nt++; eP = P[i]; } } }
+      else if (Math.abs(d) > 2 * v.k) { cur = 0; stops++; cool = true; }
+      else if ((cur < 0 && d <= 0) || (cur > 0 && d >= 0)) { if ((P[i] - eP) * cur > 0) wins++; cur = 0; }
+      pos[i] = cur;
+    }
+    const eq = [0]; for (let i = 1; i < n; i++) eq.push(eq[i - 1] + pos[i - 1] * (P[i] - P[i - 1]) - 0.01 * Math.abs(pos[i] - pos[i - 1]));
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '价格、VWAP 与带宽', panels: [
+      { h: 210, title: '价格、VWAP 与带宽', shade: runs(pos), series: [{ d: up, c: 'other', dash: 1, w: 1.2, label: '上轨' }, { d: dn, c: 'other', dash: 1, w: 1.2, label: '下轨' }, { d: P, c: 'text', w: 1.2 }, { d: vw, c: 'accent', w: 2.2, label: 'VWAP' }] },
+      { h: 100, title: '累计盈亏（点）', series: [{ d: eq, c: 'accent-strong', w: 2, label: sgn(eq[n - 1], 2) }], hl: [{ v: 0 }] }],
+      xl: [[0, '开盘', 'start'], [n - 1, '收盘', 'end']] });
+    el.querySelector('.msg').textContent = `开仓 ${nt} 次，回到 VWAP 平仓且盈利 ${wins} 次，止损 ${stops} 次。累计 ${sgn(eq[n - 1], 2)} 点。${v.day === 'trend' ? '趋势日里 VWAP 跟着价格一起移动，价格偏离后不回来，反向开仓多数以止损或收盘平仓结束。' : '震荡日里价格多次回到 VWAP，这是策略设计时假设的情况。'}`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 网格 */
+W.grid = el => {
+  const v = { path: 'range', sp: 1, seed: 9 };
+  const defs = [['sp', '格距（%）', 0.3, 3, 0.1, x => x.toFixed(1)]];
+  el.innerHTML = `<div class="bar">${segs(el, 'path', '价格路径', [['range', '来回震荡'], ['down', '单边下跌'], ['up', '单边上涨']], v)}<button type="button" class="btn quiet" data-act="seed">换一条路径</button></div>
+    ${ctl(el, defs, v)}<div class="cv"></div><p class="msg"></p>
+    <p class="note">中心价 100，向下每穿过一条格线买入 1 份，向上每穿过一条卖出 1 份（期货网格，可以持有空头）。已实现部分按后进先出配对计算，不计手续费。</p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 6151 + { range: 0, down: 1, up: 2 }[v.path])), n = 400, P = [100];
+    for (let i = 1; i < n; i++) P.push(v.path === 'range' ? P[i - 1] + 0.03 * (100 - P[i - 1]) + 0.7 * g() : P[i - 1] + (v.path === 'down' ? -0.07 : 0.07) + 0.6 * g());
+    const step = v.sp; let lvl = 0, cash = 0, I = 0, Rz = 0, pairs = 0, buys = 0, sells = 0; const stack = [], inv = [0], tot = [0], real = [0], unr = [0];
+    const trade = (dir, px) => { cash -= dir * px; I += dir; if (dir > 0) buys++; else sells++; const top = stack[stack.length - 1]; if (top && top.d === -dir) { stack.pop(); Rz += dir > 0 ? top.px - px : px - top.px; pairs++; } else stack.push({ d: dir, px }); };
+    for (let i = 1; i < n; i++) {
+      const nl = Math.floor((P[i] - 100) / step + 1e-9);
+      while (nl < lvl) { trade(1, 100 + step * lvl); lvl--; }
+      while (nl > lvl) { lvl++; trade(-1, 100 + step * lvl); }
+      inv.push(I); const t = cash + I * P[i]; tot.push(t); real.push(Rz); unr.push(t - Rz);
+    }
+    const lo = Math.min(...P), hi = Math.max(...P), lines = [];
+    for (let k = Math.ceil((lo - 100) / step); k <= Math.floor((hi - 100) / step); k++) lines.push({ v: 100 + k * step, c: 'border' });
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '价格与格线、库存、盈亏', panels: [
+      { h: 180, title: '价格与格线', series: [{ d: P, c: 'text', w: 1.3 }], hl: lines.length < 60 ? lines : [] },
+      { h: 90, title: '库存（份，正为多头）', bars: { d: inv, merge: true }, hl: [{ v: 0 }] },
+      { h: 130, title: '盈亏（点）', series: [{ d: unr, c: 'other', w: 1.5, label: '库存浮动' }, { d: real, c: 'accent', w: 1.5, dash: 1, label: '已实现' }, { d: tot, c: 'accent-strong', w: 2.2, label: '合计' }], hl: [{ v: 0 }] }],
+      xl: [[0, '开始', 'start'], [n - 1, '结束', 'end']] });
+    el.querySelector('.msg').textContent = `买入 ${buys} 次，卖出 ${sells} 次，完成来回 ${pairs} 次，每次锁定 ${step.toFixed(1)} 点，已实现 ${sgn(Rz, 1)} 点。期末库存 ${I > 0 ? '+' : ''}${I} 份，库存浮动 ${sgn(unr[n - 1], 1)} 点，合计 ${sgn(tot[n - 1], 1)} 点。${v.path === 'range' ? '' : '单边行情里已实现收益仍在增加，但库存朝一个方向累积，浮亏大于已实现收益。'}`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 期现基差 */
+W.basis = el => {
+  const v = { b0: 12, fee: 20, path: 'up', seed: 11 };
+  const defs = [['b0', '入场年化基差（%）', 2, 30, 1], ['fee', '两腿开平总成本（基点）', 0, 60, 2]];
+  el.innerHTML = `<div class="bar">${segs(el, 'path', '期间价格', [['up', '上涨'], ['flat', '横盘'], ['down', '下跌']], v)}<button type="button" class="btn quiet" data-act="seed">换一条路径</button></div>
+    ${ctl(el, defs, v)}<div class="cv"></div><div class="tbl-wrap tb"></div>
+    <p class="note">买 1 BTC 现货、卖 1 BTC 季度合约，离到期 90 天，现货起始价 60,000 美元。期货价格 = 现货 ×（1 + 年化基差 × 剩余天数 ÷ 365），年化基差每天随机波动。</p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 2741 + { up: 0, flat: 1, down: 2 }[v.path])), n = 91, S0 = 60000, dr = { up: 0.004, flat: 0, down: -0.004 }[v.path];
+    const S = [S0], b = [v.b0 / 100];
+    for (let t = 1; t < n; t++) { S.push(S[t - 1] * Math.exp(dr + 0.025 * g())); b.push(b[t - 1] + 0.15 * (v.b0 / 100 - b[t - 1]) + 0.02 * g()); }
+    const F = S.map((s, t) => s * (1 + b[t] * (90 - t) / 365)), basis = F.map((f, t) => f - S[t]);
+    const pnl = basis.map(x => basis[0] - x), leg = F.map(f => -(f - F[0])), fee = v.fee / 10000 * S0, net = basis[0] - fee;
+    const worst = Math.max(0, -Math.min(...leg));
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '现货与期货价格、基差、组合盈亏', panels: [
+      { h: 160, title: '价格（美元）', series: [{ d: S, c: 'muted', w: 1.4, label: '现货' }, { d: F, c: 'accent', w: 1.6, label: '季度合约' }] },
+      { h: 100, title: '基差：期货 − 现货（美元）', series: [{ d: basis, c: 'accent-strong', w: 2 }], hl: [{ v: 0 }] },
+      { h: 130, title: '盈亏（美元，未扣成本）', series: [{ d: leg, c: 'other', w: 1.4, dash: 1, label: '期货腿' }, { d: pnl, c: 'accent-strong', w: 2.2, label: '组合' }], hl: [{ v: 0 }] }],
+      xl: [[0, '入场', 'start'], [n - 1, '到期', 'end']] });
+    el.querySelector('.tb').innerHTML = `<table><tbody>
+      <tr><td>入场基差</td><td class="r">${fmt(basis[0])} 美元（${fmt(basis[0] / S0 * 100, 2)}%）</td></tr>
+      <tr><td>两腿成本</td><td class="r">${fmt(fee)} 美元</td></tr>
+      <tr class="hl"><td>到期净收益</td><td class="r">${sgn(net)} 美元，年化 ${fmt(net / S0 * 365 / 90 * 100, 1)}%</td></tr>
+      <tr><td>期货腿最大浮亏</td><td class="r ${worst > 0.1 * S0 ? 'warnv' : ''}">${fmt(worst)} 美元（名义金额的 ${fmt(worst / S0 * 100, 1)}%）</td></tr>
+      </tbody></table><p class="note" style="margin-top:8px">组合的最终收益与价格走向无关，但期货账户需要准备足够的保证金承受期货腿的浮亏${v.path === 'up' ? '。价格上涨时这部分浮亏最大，保证金不足会被强平，套利变成只剩现货的单边多头。' : '。'}</p>`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 资金费率 */
+W.funding = el => {
+  const v = { thr: 10, fee: 20, seed: 13 };
+  const defs = [['thr', '入场阈值（年化 %）', 0, 40, 1], ['fee', '开平一次总成本（基点）', 0, 60, 2]];
+  el.innerHTML = `<div class="formula">资金费率 = 平均溢价指数 + clamp（0.01% − 平均溢价指数，−0.05%，+0.05%）</div>
+    ${ctl(el, defs, v)}<div class="bar"><button type="button" class="btn quiet" data-act="seed">换一段行情</button><span class="status">90 天，每 8 小时结算一次</span></div>
+    <div class="cv"></div><p class="msg"></p>
+    <p class="note">溢价指数为模拟：前 30 天偏牛、之后平稳、第 55–70 天偏熊、最后 20 天偏牛。策略看过去 3 天（9 期）平均费率的年化值，高于阈值开仓（买现货、卖永续），低于阈值一半平仓。</p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 4421)), n = 270, F = []; let x = 0.0001;
+    for (let i = 0; i < n; i++) { const d = Math.floor(i / 3), mu = d < 30 ? 0.0006 : d < 55 ? 0.0001 : d < 70 ? -0.0007 : 0.0004; x = 0.9 * x + 0.1 * mu + 0.00025 * g(); F.push(Math.max(-0.0075, Math.min(0.0075, x + Math.max(-0.0005, Math.min(0.0005, 0.0001 - x))))); }
+    const pos = Array(n).fill(0); let cur = 0, opens = 0;
+    for (let i = 0; i < n; i++) { const w = F.slice(Math.max(0, i - 8), i + 1), sig = mean(w) * 3 * 365 * 100; if (!cur && sig > v.thr) { cur = 1; opens++; } else if (cur && sig < v.thr / 2) cur = 0; pos[i] = cur; }
+    const eq = [0], base = [-v.fee / 2]; for (let i = 1; i < n; i++) { eq.push(eq[i - 1] + pos[i - 1] * F[i] * 1e4 - v.fee / 2 * Math.abs(pos[i] - pos[i - 1])); base.push(base[i - 1] + F[i] * 1e4); }
+    if (pos[0]) eq[0] -= v.fee / 2;
+    const endEq = eq[n - 1] - (pos[n - 1] ? v.fee / 2 : 0), endBase = base[n - 1] - v.fee / 2, hold = pos.filter(p => p).length / n;
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '资金费率与累计收益', panels: [
+      { h: 150, title: '每期资金费率（基点；浅色底：持仓中）', shade: runs(pos), bars: { d: F.map(f => +(f * 1e4).toFixed(3)) }, hl: [{ v: 1, c: 'accent-strong', dash: 1, label: '0.01%' }] },
+      { h: 120, title: '累计收益（基点，按名义金额）', series: [{ d: base, c: 'muted', dash: 1, w: 1.4, label: '一直持有' }, { d: eq, c: 'accent-strong', w: 2.2, label: '按阈值进出' }], hl: [{ v: 0 }] }],
+      xl: [[0, '第 1 天', 'start'], [n - 1, '第 90 天', 'end']] });
+    el.querySelector('.msg').textContent = `开仓 ${opens} 次，持仓时间占 ${fmt(hold * 100)}%。按阈值进出：扣成本后 ${sgn(endEq, 1)} 个基点，年化 ${fmt(endEq / 1e4 * 365 / 90 * 100, 1)}%。一直持有：${sgn(endBase, 1)} 个基点。费率在多数时段正好等于 0.01%，这是公式里 clamp 的作用。收益率按名义金额计算；现货腿需要全额资金，永续腿还需要保证金，按总占用资金计算的收益率更低。`;
+  }
+  bindCtl(el, defs, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 跨期价差 */
+W.calendar = el => {
+  const v = { shape: 'cur', store: 15, rate: 3 };
+  const defs = [['store', '仓储费（元/吨/月）', 3, 40, 1], ['rate', '资金年利率（%）', 0, 8, 0.5, x => x.toFixed(1)]];
+  const C = { con: [3500, 3528, 3557, 3585, 3611, 3640], back: [3500, 3462, 3431, 3405, 3382, 3366], cur: [3500, 3532, 3590, 3655, 3690, 3750] };
+  el.innerHTML = `<div class="bar">${segs(el, 'shape', '曲线', [['con', '正向市场'], ['back', '反向市场'], ['cur', '远月偏高']], v)}</div>
+    ${ctl(el, defs, v)}<div class="cv"></div><div class="tbl-wrap tb"></div>
+    <p class="note">虚构的黑色系品种，6 个相隔一个月的合约。持有成本上限 = 近月价格 + 月数 ×（仓储费 + 近月价格 × 月利率）+ 12 元/吨的交割、质检、出入库等一次性费用。</p>`;
+  function upd() {
+    const p = C[v.shape], cost = m => m ? 3500 + m * (v.store + 3500 * v.rate / 100 / 12) + 12 : 3500, bd = p.map((_, m) => cost(m)), ex = p.map((x, m) => m ? x - bd[m] : 0);
+    const yl = Math.min(...p, ...bd) - 30, yh = Math.max(...p, ...bd) + 40;
+    const months = ['近月', '+1 月', '+2 月', '+3 月', '+4 月', '+5 月'];
+    el.querySelector('.cv').innerHTML = xy({ w: CW(), h: 280, aria: '期限结构与持有成本上限', xlo: -0.3, xhi: 5.3, ylo: yl, yhi: yh, xt: months.map((t, m) => [m, t]), ylab: '价格（元/吨）',
+      polys: [{ pts: [...bd.map((b, m) => [m, b]), [5, yh], [0, yh]], c: 'accent-soft' }],
+      curves: [{ pts: bd.map((b, m) => [m, b]), c: 'other', dash: 1, w: 1.6, label: '持有成本上限', lc: 'other', lp: [5, bd[5], 'end'] }, { pts: p.map((x, m) => [m, x]), c: 'accent', w: 2.2 }],
+      marks: p.map((x, m) => ({ x: m, y: x, r: ex[m] > 0 ? 5.5 : 3.5, c: ex[m] > 0 ? 'accent-strong' : 'accent', label: ex[m] > 0 ? `高出 ${fmt(ex[m])}` : '', a: m > 3 ? 'end' : 'start', dy: 18 })) });
+    el.querySelector('.tb').innerHTML = `<table><thead><tr><th>合约</th><th class="r">价格</th><th class="r">与近月之差</th><th class="r">持有成本上限</th><th class="r">超出部分</th><th>可以怎么做</th></tr></thead><tbody>${p.map((x, m) => `<tr class="${ex[m] > 0 ? 'hl' : ''}"><td>${months[m]}</td><td class="r">${fmt(x)}</td><td class="r">${m ? sgn(x - 3500) : '—'}</td><td class="r">${m ? fmt(bd[m]) : '—'}</td><td class="r">${m ? (ex[m] > 0 ? '+' + fmt(ex[m]) : '无') : '—'}</td><td>${!m ? '' : ex[m] > 0 ? '正套：买近月、卖这个月份，接货后在这个月份交割' : x < 3500 ? '反向市场：没有对称的下限，反套是方向判断' : '在成本以内，没有无风险的正套'}</td></tr>`).join('')}</tbody></table>`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  upd();
+};
+
+/* 压榨利润 */
+W.crush = el => {
+  const v = { soy: 3900, meal: 3300, oil: 8200, fee: 150 };
+  const defs = [['soy', '大豆（元/吨）', 3600, 5200, 10], ['meal', '豆粕（元/吨）', 2600, 4000, 10], ['oil', '豆油（元/吨）', 6800, 9400, 20], ['fee', '加工费（元/吨）', 100, 220, 5]];
+  const g = gaussOf(rngOf(43)), hist = [60]; for (let i = 1; i < 250; i++) hist.push(hist[i - 1] + 0.04 * (60 - hist[i - 1]) + 30 * g());
+  const hm = mean(hist), hs = sd(hist);
+  el.innerHTML = `${ctl(el, defs, v)}<div class="cv"></div><div class="cv2"></div><p class="msg"></p>
+    <p class="note">系数按 1 吨大豆产出 0.785 吨豆粕、0.185 吨豆油。下方的历史序列为模拟，用来说明利润围绕中心来回摆动的形状；当前点按上方滑块的价格计算。</p>`;
+  function upd() {
+    const mv = 0.785 * v.meal, ov = 0.185 * v.oil, out = mv + ov, inp = v.soy + v.fee, m = out - inp, Wd = CW(), L = 64, R = 20, sc = (Wd - L - R) / (Math.max(out, inp) * 1.04);
+    const seg = (x, w, c, t) => `<rect x="${x.toFixed(1)}" width="${w.toFixed(1)}" height="30" style="fill:${col(c)}"/>${w > 110 ? `<text x="${(x + 8).toFixed(1)}" y="20" style="fill:var(--accent-text)">${t}</text>` : ''}`;
+    let s = `<g transform="translate(0,8)"><text x="0" y="20" class="t-strong">产出</text>${seg(L, mv * sc, 'accent', '豆粕 ' + fmt(mv))}${seg(L + mv * sc, ov * sc, 'accent-strong', '豆油 ' + fmt(ov))}</g>`;
+    s += `<g transform="translate(0,52)"><text x="0" y="20" class="t-strong">投入</text>${seg(L, v.soy * sc, 'other', '大豆 ' + fmt(v.soy))}<rect x="${(L + v.soy * sc).toFixed(1)}" width="${(v.fee * sc).toFixed(1)}" height="30" style="fill:var(--muted)"/></g>`;
+    const xa = L + out * sc, xb = L + inp * sc;
+    s += `<line x1="${xa.toFixed(1)}" x2="${xa.toFixed(1)}" y1="4" y2="96" style="stroke:var(--text);stroke-dasharray:3 3"/><line x1="${xb.toFixed(1)}" x2="${xb.toFixed(1)}" y1="4" y2="96" style="stroke:var(--text);stroke-dasharray:3 3"/>`;
+    s += `<text x="${L}" y="116" class="t-strong">利润 = 产出 − 投入 = ${sgn(m)} 元/吨</text>`;
+    el.querySelector('.cv').innerHTML = `<svg class="chart" viewBox="0 0 ${Wd} 124" role="img" aria-label="压榨利润的产出与投入对比">${s}</svg>`;
+    const n = hist.length + 1, ser = hist.concat([null]);
+    el.querySelector('.cv2').innerHTML = plot({ n, aria: '压榨利润的历史与当前位置', panels: [{ h: 170, title: '压榨利润（元/吨）', series: [{ d: ser, c: 'text', w: 1.3 }], hl: [{ v: hm + 1.5 * hs, c: 'other', dash: 1, label: '卖出利润' }, { v: hm, c: 'muted', label: '中心' }, { v: hm - 1.5 * hs, c: 'accent', dash: 1, label: '买入利润' }], dots: [{ i: n - 1, v: m, r: 5 }] }], xl: [[0, '一年前', 'start'], [n - 1, '当前', 'end']] });
+    const zq = (m - hm) / hs;
+    el.querySelector('.msg').textContent = `当前利润 ${sgn(m)} 元/吨，相对模拟历史中心 ${fmt(hm)} 元/吨偏离 ${fmt(zq, 1)} 个标准差。${zq < -1.5 ? '低于下沿：买入利润，即买豆粕、豆油，卖大豆；油厂在亏损时会减少开工，产出下降推动利润回升。' : zq > 1.5 ? '高于上沿：卖出利润，即卖豆粕、豆油，买大豆；高利润会让油厂提高开工，产出增加压低利润。' : '在区间以内，不交易。'} 合约配比按 10 手大豆 : 8 手豆粕 : 2 手豆油。`;
+  }
+  bindCtl(el, defs, v, upd);
+  upd();
+};
+
+/* 跨交易所价差 */
+W.xex = el => {
+  const v = { cost: 12, seed: 17 };
+  const defs = [['cost', '两边总成本（基点）', 2, 30, 1]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="bar"><button type="button" class="btn quiet" data-act="seed">换一段行情</button><span class="status">30 分钟，每秒一个点</span></div>
+    <div class="cv"></div><div class="cv2"></div><p class="msg"></p>
+    <p class="note">价差 = B 交易所中间价 − A 交易所中间价（基点）。价差由缓慢漂移的部分、偶发的一边先动的冲击和噪声组成。每次价差从带内穿出带外算一次机会，按穿出时超出成本的部分计收益。</p>`;
+  function upd() {
+    const r = rngOf(v.seed * 3301), g = gaussOf(r), n = 1800, s = []; let b = 0, j = 0;
+    for (let i = 0; i < n; i++) { b = b * 0.99 + 0.6 * g(); j = j * 0.9 + (r() < 0.005 ? (r() < 0.5 ? -1 : 1) * (10 + 12 * r()) : 0); s.push(b + j + g()); }
+    let eps = 0, tot = 0, inside = 0; const dots = [];
+    s.forEach((x, i) => { const out = Math.abs(x) > v.cost; if (!out) inside++; if (out && (i === 0 || Math.abs(s[i - 1]) <= v.cost)) { eps++; tot += Math.abs(x) - v.cost; dots.push({ i, v: x, r: 3.4 }); } });
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '两个交易所的价差与成本带', panels: [{ h: 200, title: '价差（基点）', series: [{ d: s, c: 'text', w: 0.9 }], hl: [{ v: v.cost, c: 'accent', dash: 1, label: '+成本' }, { v: 0 }, { v: -v.cost, c: 'accent', dash: 1, label: '−成本' }], dots }], xl: [[0, '0 分', 'start'], [n - 1, '30 分', 'end']] });
+    const lo = Math.floor(Math.min(...s)), hi = Math.ceil(Math.max(...s));
+    el.querySelector('.cv2').innerHTML = xy({ w: CW(), h: 170, aria: '价差分布', rects: histRects(s, lo, hi, 50, x => Math.abs(x) > v.cost ? 'accent-strong' : 'border'), ylo: 0, vl: [{ v: v.cost, c: 'accent', dash: 1 }, { v: -v.cost, c: 'accent', dash: 1 }], ylab: '秒数', xlab: '价差分布（基点）；深色为成本带以外' });
+    el.querySelector('.msg').textContent = `成本 ${v.cost} 个基点时，${fmt(inside / n * 100, 1)}% 的时间价差在成本带以内。穿出成本带 ${eps} 次，按穿出时超出的部分合计 ${fmt(tot, 1)} 个基点。成本每降低一点，带子变窄，机会次数增加；这也是手续费等级决定这个行业格局的原因。`;
+  }
+  bindCtl(el, defs, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 做市 markout */
+W.mm = el => {
+  const v = { spr: 1, inf: 20, reb: 0 };
+  const defs = [['spr', '价差（跳）', 1, 4, 1], ['inf', '知情订单占比（%）', 0, 60, 1], ['reb', '返佣（跳/笔）', 0, 0.3, 0.05, x => x.toFixed(2)]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="cv"></div><div class="tbl-wrap tb"></div>
+    <p class="note">简化模型：知情订单成交后，中间价在几秒内向不利方向移动 2 跳；非知情订单成交后价格期望不变。队尾的订单通常在整档快被吃完时才成交，这里假设队尾成交中知情订单的比例更高。用于展示形状，数字不代表任何真实市场。</p>`;
+  function upd() {
+    const J = 2, tau = 3, a = v.inf / 100, af = a * 0.6, ab = Math.min(0.95, a * 1.6 + 0.1);
+    const mk = (h, x) => v.spr / 2 + v.reb - x * J * (1 - Math.exp(-h / tau));
+    const hs = Array.from({ length: 61 }, (_, i) => i * 0.5);
+    const f30 = mk(30, af), b30 = mk(30, ab);
+    el.querySelector('.cv').innerHTML = xy({ w: CW(), h: 270, aria: '成交后的中间价变化', xlo: 0, xhi: 30, ylo: Math.min(-0.6, b30 - 0.25), yhi: v.spr / 2 + v.reb + 0.45, xlab: '成交后经过的秒数', ylab: '每笔平均盈亏（跳）', hl: [{ v: 0, c: 'text', label: '盈亏平衡' }],
+      curves: [{ pts: hs.map(h => [h, mk(h, af)]), c: 'accent', w: 2.4, label: `排在队首：30 秒后 ${sgn(f30, 2)}`, lp: [12, mk(12, af), 'start'] }, { pts: hs.map(h => [h, mk(h, ab)]), c: 'other', w: 2.4, label: `排在队尾：30 秒后 ${sgn(b30, 2)}`, lc: 'other', lp: [12, mk(12, ab), 'start'] }],
+      marks: [{ x: 0, y: v.spr / 2 + v.reb, r: 4, label: '成交瞬间：半个价差 + 返佣', dy: -10 }] });
+    const pf = 0.6, pb = 0.25;
+    el.querySelector('.tb').innerHTML = `<table><thead><tr><th>排队位置</th><th class="r">成交中知情占比</th><th class="r">30 秒后每笔</th><th class="r">每分钟成交概率</th><th class="r">每分钟期望（跳）</th></tr></thead><tbody>
+      <tr><td>队首</td><td class="r">${fmt(af * 100)}%</td><td class="r ${f30 >= 0 ? 'okv' : 'warnv'}">${sgn(f30, 2)}</td><td class="r">${pf}</td><td class="r">${sgn(pf * f30, 3)}</td></tr>
+      <tr><td>队尾</td><td class="r">${fmt(ab * 100)}%</td><td class="r ${b30 >= 0 ? 'okv' : 'warnv'}">${sgn(b30, 2)}</td><td class="r">${pb}</td><td class="r">${sgn(pb * b30, 3)}</td></tr></tbody></table>`;
+  }
+  bindCtl(el, defs, v, upd);
+  upd();
+};
+
+/* 盘口不平衡 */
+W.obi = el => {
+  const v = { qb: 40, qa: 15 };
+  const defs = [['qb', '买一挂单量（手）', 1, 80, 1], ['qa', '卖一挂单量（手）', 1, 80, 1]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="grid2"><div class="cv"></div><div class="cv2"></div></div><p class="msg"></p>
+    <p class="note">左图：买单向左、卖单向右，中间两条线之间的空白代表买一价 4000 到卖一价 4001 这一跳。右图的点为模拟的分箱统计，曲线为拟合的 S 形。</p>`;
+  const r = rngOf(53), dotsS = Array.from({ length: 10 }, (_, k) => { const I = (k + 0.5) / 10; return [I, 1 / (1 + Math.exp(-5.5 * (I - 0.5))) + (r() - 0.5) * 0.06]; });
+  function upd() {
+    const bids = [v.qb, 35, 50, 42, 60], asks = [v.qa, 30, 45, 55, 48], I = v.qb / (v.qb + v.qa), micro = 4001 * I + 4000 * (1 - I);
+    const Wd = 400, rh = 22, gap = 44, cxm = Wd / 2, half = 150, sc = half / 80, top = 6;
+    let s = ''; const yA = k => top + (4 - k) * rh, gTop = top + 5 * rh, gBot = gTop + gap, yB = k => gBot + k * rh;
+    asks.forEach((q, k) => { const y = yA(k); s += `<rect x="${cxm + 28}" y="${y + 3}" width="${(q * sc * 0.75).toFixed(1)}" height="${rh - 6}" style="fill:var(--other)"/><text x="${cxm}" y="${y + rh / 2 + 4}" text-anchor="middle" class="num">${4001 + k}</text><text x="${(cxm + 34 + q * sc * 0.75).toFixed(1)}" y="${y + rh / 2 + 4}" class="num">${q}</text>`; });
+    bids.forEach((q, k) => { const y = yB(k); s += `<rect x="${(cxm - 28 - q * sc * 0.75).toFixed(1)}" y="${y + 3}" width="${(q * sc * 0.75).toFixed(1)}" height="${rh - 6}" style="fill:var(--accent)"/><text x="${cxm}" y="${y + rh / 2 + 4}" text-anchor="middle" class="num">${4000 - k}</text><text x="${(cxm - 34 - q * sc * 0.75).toFixed(1)}" y="${y + rh / 2 + 4}" text-anchor="end" class="num">${q}</text>`; });
+    const ym = (gTop + gBot) / 2, yu = gBot - (micro - 4000) * gap;
+    s += `<line x1="20" x2="${Wd - 20}" y1="${ym}" y2="${ym}" style="stroke:var(--muted);stroke-dasharray:4 4"/><text x="20" y="${ym - 4}" class="num">中间价 4000.50</text>`;
+    s += `<line x1="20" x2="${Wd - 20}" y1="${yu.toFixed(1)}" y2="${yu.toFixed(1)}" style="stroke:var(--accent-strong);stroke-width:2"/><text x="${Wd - 20}" y="${(yu + (micro > 4000.5 ? 14 : -5)).toFixed(1)}" text-anchor="end" class="num" style="fill:var(--accent-strong)">微观价格 ${micro.toFixed(2)}</text>`;
+    el.querySelector('.cv').innerHTML = `<svg class="chart" viewBox="0 0 ${Wd} ${gBot + 5 * rh + 6}" role="img" aria-label="五档盘口与微观价格">${s}</svg>`;
+    const pu = 1 / (1 + Math.exp(-5.5 * (I - 0.5)));
+    el.querySelector('.cv2').innerHTML = xy({ w: 400, h: 300, aria: '不平衡度与下一次向上的概率', xlo: 0, xhi: 1, ylo: 0, yhi: 1, xlab: '不平衡度 I = 买一 ÷（买一 + 卖一）', ylab: '下一次变动向上的概率', pts: dotsS, pc: 'muted', hl: [{ v: 0.5, dash: 1 }],
+      curves: [{ pts: Array.from({ length: 51 }, (_, k) => [k / 50, 1 / (1 + Math.exp(-5.5 * (k / 50 - 0.5)))]), c: 'accent', w: 2.2 }], vl: [{ v: I, c: 'accent-strong', dash: 1 }], marks: [{ x: I, y: pu, label: fmt(pu, 2), a: I > 0.7 ? 'end' : 'start' }] });
+    el.querySelector('.msg').textContent = `不平衡度 ${I.toFixed(2)}，微观价格 ${micro.toFixed(2)}，比中间价${micro > 4000.5 ? '高' : micro < 4000.5 ? '低' : '持平'} ${Math.abs(micro - 4000.5).toFixed(2)} 跳。按右图曲线，下一次变动向上的概率约 ${fmt(pu, 2)}。吃单买入要付出半个价差（0.5 跳）加手续费，只有预期移动超过这个成本时才值得行动。`;
+  }
+  bindCtl(el, defs, v, upd);
+  upd();
+};
+
+/* 订单流不平衡 */
+W.ofi = el => {
+  const v = { depth: 40, mode: 'same', seed: 19 };
+  const defs = [['depth', '平均盘口深度（手）', 10, 120, 5]];
+  el.innerHTML = `<div class="formula">e = 1{Pᵇ新 ≥ Pᵇ旧}·qᵇ新 − 1{Pᵇ新 ≤ Pᵇ旧}·qᵇ旧 − 1{Pᵃ新 ≤ Pᵃ旧}·qᵃ新 + 1{Pᵃ新 ≥ Pᵃ旧}·qᵃ旧<br>OFI = 一个时间窗内所有 e 之和　　Δ中间价 ≈ β × OFI，β ∝ 1 ÷ 深度</div>
+    <div class="bar">${segs(el, 'mode', '纵轴', [['same', '同一窗口的价格变动'], ['next', '下一窗口的价格变动']], v)}<button type="button" class="btn quiet" data-act="seed">重新抽样</button></div>
+    ${ctl(el, defs, v)}<div class="cv"></div><p class="msg"></p>
+    <p class="note">400 个 10 秒窗口的模拟数据。上标 b 表示买一，a 表示卖一，P 为价格，q 为挂单量。</p>`;
+  function upd() {
+    const r = rngOf(v.seed * 7717), g = gaussOf(r), pts = [];
+    for (let i = 0; i < 400; i++) { const o = 30 * g() * (r() < 0.05 ? 3 : 1); const dm = v.mode === 'same' ? 2 * o / v.depth + 0.4 * g() : 0.15 * o / v.depth + 1.0 * g(); pts.push([o, dm]); }
+    const mx = mean(pts.map(p => p[0])), my = mean(pts.map(p => p[1])); let sxy = 0, sxx = 0, syy = 0;
+    pts.forEach(([a, b]) => { sxy += (a - mx) * (b - my); sxx += (a - mx) ** 2; syy += (b - my) ** 2; });
+    const beta = sxy / sxx, r2 = sxy * sxy / (sxx * syy), a0 = my - beta * mx;
+    el.querySelector('.cv').innerHTML = xy({ w: CW(), h: 320, aria: 'OFI 与中间价变动散点图', xlo: -120, xhi: 120, ylo: -8, yhi: 8, xlab: '10 秒窗口内的 OFI（手）', ylab: v.mode === 'same' ? '同一窗口的中间价变动（跳）' : '下一窗口的中间价变动（跳）',
+      pts: pts.filter(p => Math.abs(p[0]) <= 120 && Math.abs(p[1]) <= 8), hl: [{ v: 0 }], vl: [{ v: 0 }],
+      curves: [{ pts: [[-120, a0 - 120 * beta], [120, a0 + 120 * beta]], c: 'accent-strong', w: 2.4, label: `斜率 ${beta.toFixed(3)} 跳/手，R² = ${r2.toFixed(2)}`, lp: [118, a0 + 118 * beta, 'end'] }] });
+    el.querySelector('.msg').textContent = v.mode === 'same' ? `深度 ${v.depth} 手：拟合斜率 ${beta.toFixed(3)}，R² ${r2.toFixed(2)}。把深度调小，同样的 OFI 推动的价格变化更大，直线变陡；这是“推力 ÷ 质量”的关系。` : `用当前窗口的 OFI 预测下一窗口：斜率 ${beta.toFixed(3)}，R² ${r2.toFixed(3)}。点云几乎是水平的一团。同期关系强不代表能预测，可交易的是这条平坦直线中剩下的那一点斜率，而且要扣除成本。`;
+  }
+  bindCtl(el, defs, v, upd); bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 领先滞后 */
+W.leadlag = el => {
+  const v = { lag: 300, my: 150, seed: 23 };
+  const defs = [['lag', '真实滞后（毫秒）', 0, 1000, 100], ['my', '你的系统延迟（毫秒）', 0, 1000, 10]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="bar"><button type="button" class="btn quiet" data-act="seed">重新抽样</button><span class="status">每 100 毫秒一个点，共 120 秒</span></div>
+    <div class="cv"></div><div class="cv2"></div><p class="msg"></p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 1123)), n = 1200, k = Math.round(v.lag / 100), rl = [], rf = [];
+    for (let t = 0; t < n; t++) rl.push(g());
+    for (let t = 0; t < n; t++) rf.push((t >= k ? rl[t - k] : 0) + 0.6 * g());
+    const cum = a => { let s = 0; return a.map(x => s += x); }, Lc = cum(rl), Fc = cum(rf), w0 = n - 150;
+    const Ls = Lc.slice(w0).map(x => x - Lc[w0]), Fs = Fc.slice(w0).map(x => x - Fc[w0]);
+    el.querySelector('.cv').innerHTML = plot({ n: 150, aria: '领先与滞后的两条价格', panels: [{ h: 170, title: '最后 15 秒的两条价格（起点对齐）', series: [{ d: Fs, c: 'other', w: 1.8, label: '滞后市场' }, { d: Ls, c: 'accent', w: 1.8, label: '领先市场' }] }], xl: [[0, '−15 秒', 'start'], [149, '0', 'end']] });
+    const cc = []; for (let d = -10; d <= 10; d++) { const a = [], b = []; for (let t = 10; t < n - 10; t++) { a.push(rl[t]); b.push(rf[t + d]); } const ma = mean(a), mb = mean(b); let sab = 0, saa = 0, sbb = 0; a.forEach((x, i) => { sab += (x - ma) * (b[i] - mb); saa += (x - ma) ** 2; sbb += (b[i] - mb) ** 2; }); cc.push([d * 100, sab / Math.sqrt(saa * sbb)]); }
+    const pk = cc.reduce((m, c) => c[1] > m[1] ? c : m, cc[0]);
+    el.querySelector('.cv2').innerHTML = xy({ w: CW(), h: 230, aria: '不同时间差下的收益相关系数', xlo: -1050, xhi: 1050, ylo: -0.1, yhi: 1, xlab: '时间差（毫秒）：滞后市场相对领先市场', ylab: '收益相关系数',
+      rects: cc.map(([d, c]) => [d - 35, d + 35, 0, c, d === pk[0] ? 'accent-strong' : 'border']), hl: [{ v: 0 }], vl: [{ v: v.my, c: 'accent', dash: 1, w: 1.6, label: '你的延迟', a: v.my > 700 ? 'end' : 'start' }] });
+    const win = v.lag - v.my;
+    el.querySelector('.msg').textContent = v.lag === 0 ? '真实滞后为 0：两边同时变动，相关系数的尖峰在 0 毫秒，没有可以利用的时间差。' : `相关系数在 ${pk[0]} 毫秒处最高（${pk[1].toFixed(2)}）。${win > 0 ? `你的延迟比滞后时间短 ${win} 毫秒，在这段时间内下单有机会赶在滞后市场更新之前成交；实际还要扣掉对手比你更快的部分。` : `你的延迟比滞后时间长 ${-win} 毫秒，等你的订单到达，滞后市场已经更新，这个信号对你不可用。`}`;
+  }
+  bindCtl(el, defs, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 强平连锁 */
+W.cascade = el => {
+  const v = { lev: 15, lam: 8, shock: 3 };
+  const defs = [['lev', '多头平均杠杆（倍）', 3, 50, 1], ['lam', '全部多头被强平时的额外跌幅（%）', 2, 40, 1], ['shock', '初始下跌（%）', 0.5, 10, 0.5, x => x.toFixed(1)]];
+  const zq = (() => { const g = gaussOf(rngOf(61)); return Array.from({ length: 400 }, () => g()); })();
+  el.innerHTML = `${ctl(el, defs, v)}<div class="grid2"><div class="cv"></div><div class="cv2"></div></div><p class="msg"></p>
+    <p class="note">400 个多头仓位，杠杆围绕平均值呈对数正态分布，强平距离 ≈ 1 ÷ 杠杆 − 0.5%（维持保证金）。强平卖单造成的额外跌幅与被强平仓位的比例成正比。最终跌幅满足：最终跌幅 = 初始下跌 + 额外跌幅 × 被强平比例（最终跌幅）。</p>`;
+  function upd() {
+    const d = zq.map(z => Math.max(0.002, 1 / (v.lev * Math.exp(0.5 * z)) - 0.005)), Fr = D => d.filter(x => x <= D).length / d.length;
+    const solve = s => { let D = s; for (let i = 0; i < 200; i++) { const nD = Math.min(0.95, s + v.lam / 100 * Fr(D)); if (Math.abs(nD - D) < 1e-7) break; D = nD; } return D; };
+    const s = v.shock / 100, D = solve(s);
+    el.querySelector('.cv').innerHTML = xy({ w: 400, h: 280, aria: '强平价位分布', xlo: 0, xhi: 30, ylo: 0, xlab: '强平价位：距当前价格的跌幅（%）', ylab: '仓位数量',
+      rects: histRects(d.map(x => x * 100), 0, 30, 30, c => c <= D * 100 ? 'accent-strong' : 'border'), vl: [{ v: v.shock, c: 'muted', dash: 1, label: '初始', a: 'end' }, { v: Math.min(30, D * 100), c: 'accent-strong', w: 1.6, label: '最终', dy: 14 }] });
+    const ss = Array.from({ length: 41 }, (_, i) => i * 0.25);
+    el.querySelector('.cv2').innerHTML = xy({ w: 400, h: 280, aria: '初始下跌与最终下跌', xlo: 0, xhi: 10, ylo: 0, yhi: Math.max(12, ...ss.map(x => solve(x / 100) * 100)) * 1.05, xlab: '初始下跌（%）', ylab: '最终下跌（%）',
+      curves: [{ pts: [[0, 0], [10, 10]], c: 'muted', dash: 1, w: 1.2, label: '没有放大', lc: 'muted', lp: [10, 10, 'end'] }, { pts: ss.map(x => [x, solve(x / 100) * 100]), c: 'accent', w: 2.4 }], marks: [{ x: v.shock, y: D * 100, label: `${fmt(D * 100, 1)}%`, a: v.shock > 6 ? 'end' : 'start' }] });
+    el.querySelector('.msg').textContent = `初始下跌 ${v.shock.toFixed(1)}%，触发连锁后最终下跌 ${fmt(D * 100, 1)}%，放大 ${fmt(D / s, 1)} 倍，${fmt(Fr(D) * 100)}% 的多头仓位被强平。右图的曲线在某个初始下跌附近突然变陡：在这一点之前，强平只碰到沙堆边缘；越过这一点，强平推动的下跌又碰到更密的仓位，连锁自己维持下去。平均杠杆越高，这个陡峭点越靠近零。`;
+  }
+  bindCtl(el, defs, v, upd);
+  upd();
+};
+
+/* 卖出波动率 */
+W.volsell = el => {
+  const v = { prem: 4, jump: 3, seed: 29 };
+  const defs = [['prem', '隐含高于实现（波动率点）', 0, 10, 0.5, x => x.toFixed(1)], ['jump', '每年跳跃次数', 0, 8, 1]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="bar"><button type="button" class="btn quiet" data-act="seed">换一段行情</button><span class="status">3 年，每天对冲一次</span></div>
+    <div class="cv"></div><div class="cv2"></div><p class="msg"></p>
+    <p class="note">平时的实现波动率为年化 30%，隐含波动率 = 30% + 溢价。跳跃日额外出现 6%–10% 的单日涨跌。每日盈亏以“一天的时间价值”为 1 个单位：当天价格不动时赚 1，涨跌幅正好等于隐含的日波动时为 0。</p>`;
+  function upd() {
+    const r = rngOf(v.seed * 911), g = gaussOf(r), n = 750, sdd = 0.30 / Math.sqrt(252), ivd2 = ((30 + v.prem) / 100) ** 2 / 252, pnl = [];
+    for (let i = 0; i < n; i++) { let ret = sdd * g(); if (r() < v.jump / 252) ret += (r() < 0.5 ? -1 : 1) * (0.06 + 0.04 * r()); pnl.push(1 - ret * ret / ivd2); }
+    const eq = []; pnl.reduce((s, x, i) => (eq[i] = s + x), 0);
+    const lo = Math.floor(Math.min(...pnl, -5)), hi = 1.5;
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '卖出波动率的累计盈亏', panels: [{ h: 180, title: '累计盈亏（单位：一天的时间价值）', series: [{ d: eq, c: 'accent-strong', w: 1.8, label: fmt(eq[n - 1]) }], hl: [{ v: 0 }] }], xl: [[0, '第 1 天', 'start'], [n - 1, `第 ${n} 天`, 'end']] });
+    el.querySelector('.cv2').innerHTML = xy({ w: CW(), h: 200, aria: '每日盈亏分布', xlo: lo, xhi: hi, ylo: 0, rects: histRects(pnl, lo, hi, Math.round(Math.min(80, (hi - lo) * 2)), c => c < 0 ? 'other' : 'accent'), xlab: '每日盈亏（单位：一天的时间价值）', ylab: '天数' });
+    const wins = pnl.filter(x => x > 0).length;
+    el.querySelector('.msg').textContent = `${fmt(wins / n * 100)}% 的日子盈利，平均每天 ${sgn(mean(pnl), 2)}，最差一天 ${fmt(Math.min(...pnl), 1)}。偏度 ${fmt(skew(pnl), 1)}，最大回撤 ${fmt(maxDD(eq), 1)}，约等于 ${fmt(maxDD(eq) / Math.max(0.01, mean(pnl)))} 个平均日收益。溢价调到 0 时，平均收益接近零或为负，只剩下这个形状的风险。`;
+  }
+  bindCtl(el, defs, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 伽马：抛物线与切线 */
+W.gammaA = el => {
+  const v = { ds: 6 };
+  const defs = [['ds', '标的价格移动 ΔS', -12, 12, 1, x => (x > 0 ? '+' : '') + x]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="cv"></div><p class="msg"></p>`;
+  function upd() {
+    const G = 0.04, V = S => 0.5 * G * (S - 100) ** 2, S1 = 100 + v.ds, gap = V(S1);
+    el.querySelector('.cv').innerHTML = xy({ w: CW(), h: 260, aria: '期权价值抛物线与对冲切线', xlo: 86, xhi: 114, ylo: -0.4, yhi: 4.2, xlab: '标的价格', ylab: '对冲后头寸的价值变化',
+      curves: [{ pts: Array.from({ length: 57 }, (_, i) => { const S = 86 + i * 0.5; return [S, V(S)]; }), c: 'accent', w: 2.4, label: '期权（跨式）', lp: [112, V(112), 'end'] }, { pts: [[86, 0], [114, 0]], c: 'other', w: 2, label: '期货对冲（切线）', lc: 'other', lp: [113.5, 0, 'end'] }, ...(v.ds ? [{ pts: [[S1, 0], [S1, gap]], c: 'accent-strong', w: 3 }] : [])],
+      marks: [{ x: 100, y: 0, r: 4, c: 'muted', label: '起点 100', dy: 18, a: 'start' }, ...(v.ds ? [{ x: S1, y: gap, label: `空隙 ${gap.toFixed(2)}`, a: v.ds > 0 ? 'end' : 'start' }] : [])] });
+    el.querySelector('.msg').textContent = v.ds ? `价格移动 ${v.ds > 0 ? '+' : ''}${v.ds}，抛物线比切线高 ½ × Γ × ΔS² = ½ × 0.04 × ${v.ds * v.ds} = ${gap.toFixed(2)}。方向不影响结果，只与移动幅度的平方有关。这时再对冲一次，就把这段空隙锁定为收益，新的切线以新价格为起点。` : '价格没有移动，抛物线和切线在起点相接，没有收益；这一天仍然要付出时间价值。';
+  }
+  bindCtl(el, defs, v, upd);
+  upd();
+};
+
+/* 伽马：对冲收益与时间价值 */
+W.gamma = el => {
+  const v = { rv: 40, iv: 30, band: 1, seed: 31 };
+  const defs = [['rv', '实现波动率（年化 %）', 10, 80, 1], ['iv', '隐含波动率（年化 %）', 10, 80, 1], ['band', '对冲带宽（%）', 0.2, 3, 0.1, x => x.toFixed(1)]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="bar"><button type="button" class="btn quiet" data-act="seed">换一条路径</button><span class="status">20 天，每 15 分钟一个价格</span></div>
+    <div class="cv"></div><p class="msg"></p>
+    <p class="note">每次价格相对上次对冲点移动超过带宽就对冲一次，收益为该段收益率的平方 ÷ 隐含日方差，单位是“一天的时间价值”。时间价值每天损耗 1 个单位。没有计入手续费，也忽略了 gamma 随价格的变化。</p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 577)), steps = 96, days = 20, n = steps * days + 1, sdS = v.rv / 100 / Math.sqrt(252 * steps), ivd2 = (v.iv / 100) ** 2 / 252;
+    let S = 100, Sh = 100, gain = 0, hedges = 0; const gs = [0], th = [0], net = [0];
+    for (let i = 1; i < n; i++) { S *= Math.exp(sdS * g()); const r = S / Sh - 1; if (Math.abs(r) > v.band / 100) { gain += r * r / ivd2; Sh = S; hedges++; } gs.push(gain); th.push(-i / steps); net.push(gain - i / steps); }
+    el.querySelector('.cv').innerHTML = plot({ n, aria: '对冲收益、时间价值与净值', panels: [{ h: 220, title: '累计（单位：一天的时间价值）', series: [{ d: th, c: 'other', dash: 1, w: 1.6, label: '时间价值损耗' }, { d: gs, c: 'accent', w: 1.6, label: '对冲收益' }, { d: net, c: 'accent-strong', w: 2.4, label: '净值' }], hl: [{ v: 0 }] }], xl: [[0, '第 1 天', 'start'], [n - 1, `第 ${days} 天`, 'end']] });
+    const exp = days * ((v.rv / v.iv) ** 2 - 1);
+    el.querySelector('.msg').textContent = `对冲 ${hedges} 次，对冲收益 ${fmt(gain, 1)}，时间价值损耗 ${days}，净值 ${sgn(gain - days, 1)}。按公式的期望约为 天数 ×（实现² ÷ 隐含² − 1）= ${sgn(exp, 1)}。实现波动率高于隐含波动率时净值向上，反之向下；带宽改变的主要是净值的波动和对冲次数。`;
+  }
+  bindCtl(el, defs, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 执行 */
+W.exec = el => {
+  const v = { q: 5, sig: 2, lam: 1 };
+  const defs = [['q', '订单占日成交量（%）', 0.5, 20, 0.5, x => x.toFixed(1)], ['sig', '日波动率（%）', 0.5, 5, 0.1, x => x.toFixed(1)], ['lam', '对价格风险的厌恶', 0, 3, 0.1, x => x.toFixed(1)]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="grid2"><div class="cv"></div><div class="cv2"></div></div><p class="msg"></p>
+    <p class="note">简化模型，一天按 240 分钟交易。冲击 = 0.8 × σ × √（订单量 ÷ 执行期间的市场成交量）；等待风险 = σ × √（执行时长占一天的比例 ÷ 3），即匀速执行时成交均价相对到达价的标准差。总成本 = 冲击 + 风险厌恶 × 等待风险。</p>`;
+  function upd() {
+    const Y = 0.8, sb = v.sig * 100, qf = v.q / 100, ms = Array.from({ length: 48 }, (_, i) => 5 + i * 5);
+    const imp = m => Y * sb * Math.sqrt(qf / (m / 240)), risk = m => sb * Math.sqrt(m / 240 / 3), tot = m => imp(m) + v.lam * risk(m);
+    const best = ms.reduce((a, m) => tot(m) < tot(a) ? m : a, ms[0]), ymax = Math.min(Math.max(tot(5), 60), tot(best) * 4);
+    el.querySelector('.cv').innerHTML = xy({ w: 400, h: 280, aria: '执行时长与成本', xlo: 0, xhi: 240, ylo: 0, yhi: ymax, xlab: '执行时长（分钟）', ylab: '成本（基点）',
+      curves: [{ pts: ms.map(m => [m, imp(m)]), c: 'other', w: 1.6, label: '冲击', lc: 'other', lp: [60, imp(60), 'start'] }, { pts: ms.map(m => [m, v.lam * risk(m)]), c: 'muted', dash: 1, w: 1.6, label: '风险项', lc: 'muted', lp: [235, v.lam * risk(235), 'end'] }, { pts: ms.map(m => [m, tot(m)]), c: 'accent', w: 2.6 }],
+      marks: [{ x: best, y: tot(best), label: `最优 ${best} 分钟`, a: best > 150 ? 'end' : 'start', dy: -10 }] });
+    const qs = Array.from({ length: 41 }, (_, i) => i * 0.5), c1 = Y * sb * Math.sqrt(0.01);
+    el.querySelector('.cv2').innerHTML = xy({ w: 400, h: 280, aria: '平方根律', xlo: 0, xhi: 20, ylo: 0, yhi: c1 * 20 * 0.7, xlab: '订单占日成交量（%），用一整天执行', ylab: '冲击成本（基点）',
+      curves: [{ pts: qs.map(q => [q, c1 * q]), c: 'muted', dash: 1, w: 1.4, label: '若与规模成正比', lc: 'muted', lp: [9.5, c1 * 9.5, 'end'] }, { pts: qs.map(q => [q, Y * sb * Math.sqrt(q / 100)]), c: 'accent', w: 2.6, label: '平方根律', lp: [19.5, Y * sb * Math.sqrt(0.195), 'end'] }],
+      marks: [{ x: v.q, y: Y * sb * Math.sqrt(qf), label: fmt(Y * sb * Math.sqrt(qf), 1), a: v.q > 14 ? 'end' : 'start', dy: 16 }] });
+    el.querySelector('.msg').textContent = `订单占日成交量 ${v.q.toFixed(1)}%，日波动 ${v.sig.toFixed(1)}%：最优执行时长约 ${best} 分钟，总成本约 ${fmt(tot(best), 1)} 个基点，其中冲击 ${fmt(imp(best), 1)}。风险厌恶为 0 时会尽量拉长时间；风险厌恶越高，越倾向于快速完成。`;
+  }
+  bindCtl(el, defs, v, upd);
+  upd();
+};
+
+/* 仓位 */
+W.sizing = el => {
+  const v = { p: 0.55, b: 1, seed: 37 };
+  const defs = [['p', '胜率', 0.3, 0.75, 0.01, x => x.toFixed(2)], ['b', '盈亏比', 0.5, 3, 0.1, x => x.toFixed(1)]];
+  el.innerHTML = `${ctl(el, defs, v)}<div class="bar"><button type="button" class="btn quiet" data-act="seed">换一串结果</button><span class="status">300 次下注，三条净值用同一串输赢</span></div>
+    <div class="grid2"><div class="cv"></div><div class="cv2"></div></div><p class="msg"></p>`;
+  function upd() {
+    const { p, b } = v, gr = f => p * Math.log(1 + b * f) + (1 - p) * Math.log(1 - f), fs = p - (1 - p) / b;
+    const fmax = Math.min(0.95, Math.max(0.2, fs * 2.6)), fsArr = Array.from({ length: 81 }, (_, i) => i / 80 * fmax), gs = fsArr.map(f => gr(f) * 100);
+    const lo = Math.max(-3, Math.min(...gs)), hi = Math.max(0.2, ...gs);
+    const marks = fs > 0 ? [[fs / 2, '半凯利', 'start'], [fs, '凯利', 'start'], [2 * fs, '两倍凯利', 'end']].filter(([f]) => f < fmax).map(([f, t, a]) => ({ x: f, y: gr(f) * 100, label: t, a, c: f === fs ? 'accent-strong' : 'accent' })) : [];
+    el.querySelector('.cv').innerHTML = xy({ w: 400, h: 280, aria: '仓位比例与长期增长率', xlo: 0, xhi: fmax, ylo: lo, yhi: hi, xlab: '每次下注占资金的比例', ylab: '每次下注的平均对数增长（%）', fx: x => fmt(x * 100) + '%', hl: [{ v: 0 }],
+      curves: [{ pts: fsArr.map((f, i) => [f, Math.max(lo, gs[i])]), c: 'accent', w: 2.4 }], marks });
+    if (fs <= 0) { el.querySelector('.cv2').innerHTML = ''; el.querySelector('.msg').textContent = `胜率 ${p.toFixed(2)}、盈亏比 ${b.toFixed(1)} 时期望收益不为正，凯利仓位为 0：任何正的下注比例都会让长期增长率为负。`; return; }
+    const r = rngOf(v.seed * 4093), outs = Array.from({ length: 300 }, () => r() < p);
+    const path = f => { let s = 0; return [0, ...outs.map(w => (s += Math.log10(w ? 1 + b * f : 1 - f)))]; };
+    const f2 = Math.min(0.95, 2 * fs);
+    el.querySelector('.cv2').innerHTML = plot({ w: 400, r: 80, n: 301, aria: '三种仓位下的净值', panels: [{ h: 196, title: '净值（对数刻度）', fmt: x => '×' + (10 ** x >= 10 ? fmt(10 ** x) : (10 ** x).toPrecision(2)), series: [{ d: path(f2), c: 'other', w: 1.4, label: '两倍凯利' }, { d: path(fs / 2), c: 'accent', w: 1.6, label: '半凯利' }, { d: path(fs), c: 'accent-strong', w: 2.2, label: '凯利' }], hl: [{ v: 0 }] }], xl: [[0, '第 1 次', 'start'], [300, '第 300 次', 'end']] });
+    el.querySelector('.msg').textContent = `凯利仓位 ${fmt(fs * 100, 1)}%。半凯利的增长率是凯利的 ${fmt(gr(fs / 2) / gr(fs) * 100)}%，两倍凯利的增长率为 ${sgn(gr(f2) * 100, 3)}% 每次。实际的胜率和盈亏比都是估计值；高估时，以为在用凯利仓位，实际已经在两倍凯利附近。`;
+  }
+  bindCtl(el, defs, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 过拟合：N 个随机策略中最好的 */
+W.overfit = el => {
+  const v = { N: 100, seed: 41 };
+  el.innerHTML = `<div class="bar">${segs(el, 'N', '试验次数', [[1, '1 个'], [10, '10 个'], [100, '100 个'], [1000, '1000 个']], v)}<button type="button" class="btn quiet" data-act="seed">重新生成</button></div>
+    <div class="cv"></div><p class="msg"></p>
+    <p class="note">每个“策略”是 250 个交易日的随机收益，日均值为 0，日波动 1%，也就是完全没有优势。灰线是其中最多 30 个，深色线是全部 N 个里最终收益最高的那个。</p>`;
+  function upd() {
+    const g = gaussOf(rngOf(v.seed * 2203 + v.N)), T = 250, keep = []; let best = null, bestS = -Infinity, bestF = -Infinity;
+    for (let k = 0; k < v.N; k++) { const r = Array.from({ length: T }, () => g() * 0.01); let s = 0; const eq = [0, ...r.map(x => (s += x * 100))]; const sh = mean(r) / sd(r) * Math.sqrt(252); if (k < 30) keep.push(eq); if (eq[T] > bestF) { bestF = eq[T]; best = eq; bestS = sh; } }
+    el.querySelector('.cv').innerHTML = plot({ n: T + 1, r: 120, aria: '随机策略的净值与其中最好的一个', panels: [{ h: 240, title: '累计收益（%）', series: [...keep.filter(e => e !== best).map(e => ({ d: e, c: 'muted', w: 0.8, op: 0.55 })), { d: best, c: 'accent-strong', w: 2.4, label: `最好：夏普 ${bestS.toFixed(2)}` }], hl: [{ v: 0 }] }], xl: [[0, '第 1 天', 'start'], [T, `第 ${T} 天`, 'end']] });
+    const ex = v.N > 1 ? Math.sqrt(2 * Math.log(v.N)) : 0;
+    el.querySelector('.msg').textContent = `${v.N} 个策略的真实期望收益都是 0。最好的那个年化夏普 ${bestS.toFixed(2)}，按 √(2 ln N) 粗略估计约为 ${ex.toFixed(2)}。一年数据下，夏普估计值本身的标准误约为 1。如果你在研究中试过 ${v.N} 组参数，回测里看到这样的夏普并不说明有优势。`;
+  }
+  bindSeg(el, v, upd);
+  el.querySelector('[data-act="seed"]').addEventListener('click', () => { v.seed++; upd(); });
+  upd();
+};
+
+/* 过拟合：认出真的那一条 */
+W.lineup = el => {
+  const st = { seed: 71, pick: null, right: 0, total: 0, real: 0 };
+  el.innerHTML = `<p class="note" style="max-width:none">9 条一年期净值曲线。8 条没有优势（期望收益为 0），1 条有真实优势（年化夏普 1.5）。点击你认为有优势的那一条，之后会显示答案。</p>
+    <div class="lineup"></div><div class="bar"><button type="button" class="btn quiet" data-act="next">换一组</button><span class="status sc"></span></div><p class="msg"></p>`;
+  function draw() {
+    const r = rngOf(st.seed * 977), g = gaussOf(r), T = 250; st.real = Math.floor(r() * 9);
+    const curves = Array.from({ length: 9 }, (_, k) => { const mu = k === st.real ? 1.5 / Math.sqrt(252) * 0.01 : 0; let s = 0; return [0, ...Array.from({ length: T }, () => (s += (mu + 0.01 * g()) * 100))]; });
+    const lo = Math.min(...curves.flat()), hi = Math.max(...curves.flat());
+    el.querySelector('.lineup').innerHTML = curves.map((c, k) => {
+      const x = i => 4 + i / T * 192, y = v => 4 + (hi - v) / (hi - lo) * 82;
+      const cls = st.pick == null ? '' : k === st.real ? 'real' : k === st.pick ? 'pick' : '';
+      const cap = st.pick == null ? '' : k === st.real ? '有真实优势' : k === st.pick ? '你的选择' : '';
+      return `<button type="button" data-i="${k}" class="${cls}" aria-label="第 ${k + 1} 条" ${st.pick != null ? 'disabled' : ''}><svg viewBox="0 0 200 90" class="chart"><line x1="4" x2="196" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" style="stroke:var(--border)"/><path d="${c.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')}" style="fill:none;stroke:${st.pick != null && k === st.real ? 'var(--accent-strong)' : 'var(--text)'};stroke-width:1.3"/></svg><span class="cap">${k + 1}${cap ? ' · ' + cap : ''}</span></button>`;
+    }).join('');
+    el.querySelectorAll('.lineup button').forEach(b => b.addEventListener('click', () => { if (st.pick != null) return; st.pick = +b.dataset.i; st.total++; if (st.pick === st.real) st.right++; draw(); }));
+    el.querySelector('.sc').textContent = st.total ? `本次打开页面以来：认对 ${st.right} / ${st.total}` : '';
+    el.querySelector('.msg').textContent = st.pick == null ? '还没有选择。' : `${st.pick === st.real ? '选对了。' : `有真实优势的是第 ${st.real + 1} 条。`}只看一年的净值，夏普 1.5 的策略和随机曲线经常无法区分；随机猜中的概率是 1/9。多做几组，看认对的比例是否明显高于 11%。`;
+  }
+  el.querySelector('[data-act="next"]').addEventListener('click', () => { st.seed++; st.pick = null; draw(); });
+  draw();
+};
+
+buildIndex();
+route(false);
+window.addEventListener('hashchange', () => route(true));
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
